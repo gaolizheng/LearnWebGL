@@ -2,7 +2,6 @@ var VSHADER_SOURCE = '' +
     'attribute vec4 a_Position;\n' +
     'void main(){\n' +
     'gl_Position = a_Position;\n' +
-    'gl_PointSize = 10.0;\n' +
     '}\n';
 
 var FSHADER_SOURCE = '' +
@@ -34,11 +33,12 @@ function main() {
     gl.clearColor(0, 0, 0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
 
-    gl.drawArrays(gl.POINTS, 0, n);
+    gl.drawArrays(gl.TRIANGLES, 0, n);
+    // gl.drawArrays(gl.TRIANGLES_STRIP, 0, n);
 }
 
 function initVertexBuffers(gl) {
-    var vertices = new Float32Array([0.0, 0.5, -0.5, 0.0, 0.5, 0.0]);
+    var vertices = new Float32Array([0.0, 0.5, 0.1, 0.0, 0.2, 0.5]);
     var n = 3;
     //创建缓冲区对象
     var vertexBuffer = gl.createBuffer();
