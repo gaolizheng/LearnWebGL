@@ -11,6 +11,7 @@ var FSHADER_SOURCE = '' +
     '}\n';
 
 var ANGLE = 90;
+var Tx = 0.5;
 function main() {
     var canvas = document.getElementById("webgl");
     var gl = canvas.getContext('webgl');
@@ -19,43 +20,18 @@ function main() {
         return;
     }
     var n = initVertexBuffers(gl);
-    var radian = Math.PI * ANGLE / 180.0;
-    var cosB = Math.cos(radian);
-    var sinB = Math.sin(radian);
-    // 按列主序
-    // var xformMatrix = new Float32Array([ // 旋转矩阵
-    //     cosB, sinB, 0.0, 0.0,
-    //     -sinB, cosB, 0.0, 0.0,
-    //     0.0, 0.0, 1.0, 0.0,
-    //     0.0, 0.0, 0.0, 1.0
-    // ]);
-    // var xformMatrix = new Float32Array([ // 平移矩阵
-    //     1.0, 0.0, 0.0, 0.0,
-    //     0.0, 1.0, 0.0, 0.0,
-    //     0.0, 0.0, 1.0, 0.0,
-    //     0.5, 0.5, 0.0, 1.0
-    // ]);
-    // var xformMatrix = new Float32Array([ // 缩放矩阵
-    //     0.5, 0.0, 0.0, 0.0,
-    //     0.0, 0.5, 0.0, 0.0,
-    //     0.0, 0.0, 1.0, 0.0,
-    //     0.0, 0.0, 0.0, 1.0
-    // ]);
-    var xformMatrix = new Float32Array([ // 平移加旋转矩阵
-        cosB, sinB, 0.0, 0.0,
-        -sinB, cosB, 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.5, 0.5, 0.0, 1.0
-    ]);
+    var xformMatrix = new Matrix4();
+    xformMatrix.setRotate(ANGLE, 0, 0, 1);
+    xformMatrix.translate(Tx, 0, 0);
     var u_xformMatrix = gl.getUniformLocation(gl.program, 'u_xformMatrix');
-    gl.uniformMatrix4fv(u_xformMatrix, false, xformMatrix);
+    gl.uniformMatrix4fv(u_xformMatrix, false, xformMatrix.elements);
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.TRIANGLES, 0, n);
 }
 
 function initVertexBuffers(gl) {
-    var vertiecs = new Float32Array([0.0, 0.5, -0.5, 0.0, 0.5, 0.0]);
+    var vertiecs = new Float32Array([0.0, 0.2, -0.5, 0.0, 0.5, 0.0]);
     var n = vertiecs.length / 2;
     var vertexBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
