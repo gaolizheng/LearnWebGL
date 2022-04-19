@@ -1,34 +1,27 @@
 var VSHADER_SOURCE = 
 'attribute vec4 a_Position;\n'+
 'uniform mat4 u_MvpMatrix;\n'+
-'uniform mat4 u_ModelMatrix;\n'+
-'uniform mat4 u_NormalMatrix;\n'+
+'uniform mat4 u_NormalMatrix;\n' +
 'attribute vec4 a_Color;\n'+
 'attribute vec4 a_Normal;\n'+
+'uniform vec3 u_LightColor;\n'+
+'uniform vec3 u_LightDirection;\n'+
+'uniform vec3 u_AmbientLight;\n'+
 'varying vec4 v_Color;\n'+
-'varying vec3 v_Normal;\n'+
-'varying vec3 v_Position;\n'+
 'void main(){\n'+
 'gl_Position = u_MvpMatrix * a_Position;\n'+
-'v_Normal = normalize(vec3(u_NormalMatrix * a_Normal));\n'+
-'v_Position = vec3(u_ModelMatrix * a_Position);\n'+
-'v_Color = a_Color;\n'+
+'vec3 normal = normalize((u_NormalMatrix * a_Normal).xyz);\n' +
+'float nDotL = max(dot(u_LightDirection, normal), 0.0);\n'+
+'vec3 diffuse = u_LightColor * vec3(a_Color) * nDotL;\n'+
+'vec3 ambient = u_AmbientLight * a_Color.rgb;\n'+
+'v_Color = vec4(diffuse + ambient, a_Color.a);\n'+
 '}\n';
 
 var FSHADER_SOURCE = 
 'precision mediump float;\n'+
-'uniform vec3 u_LightColor;\n'+
-'uniform vec3 u_LightPosition;\n'+
-'uniform vec3 u_AmbientLight;\n'+
 'varying vec4 v_Color;\n'+
-'varying vec3 v_Position;\n'+
-'varying vec3 v_Normal;\n'+
 'void main(){\n'+
-'vec3 normal = normalize(v_Normal);\n'+
-'vec3 lightDir = normalize(u_LightPosition - v_Position);\n'+
-'vec3 diffuse = u_LightColor * vec3(v_Color) * (max(dot(lightDir,normal),0.0));\n'+
-'vec3 ambient = u_AmbientLight * v_Color.rgb;\n'+
-'gl_FragColor = vec4(diffuse + ambient, v_Color.a);\n'+
+'gl_FragColor = v_Color;\n'+
 '}\n';
 
 function main() {
@@ -61,27 +54,15 @@ function main() {
         return;
     }
 
-    var u_ModelMatrix = gl.getUniformLocation(gl.program,"u_ModelMatrix");
-    if (u_ModelMatrix == null) {
-        console.error("can't find u_ModelMatrix");
-        return;
-    }
-
-    var u_NormalMatrix = gl.getUniformLocation(gl.program,"u_NormalMatrix");
-    if (u_NormalMatrix == null) {
-        console.error("can't find u_NormalMatrix");
-        return;
-    }
-
     var u_LightColor = gl.getUniformLocation(gl.program,"u_LightColor");
     if (u_LightColor == null) {
         console.error("can't find u_LightColor");
         return;
     }
 
-    var u_LightPosition = gl.getUniformLocation(gl.program,"u_LightPosition");
-    if (u_LightPosition == null) {
-        console.error("can't find u_LightPosition");
+    var u_LightDirection = gl.getUniformLocation(gl.program,"u_LightDirection");
+    if (u_LightDirection == null) {
+        console.error("can't find u_LightDirection");
         return;
     }
 
@@ -90,38 +71,26 @@ function main() {
         console.error("can't find u_AmbientLight");
         return;
     }
+    var u_NormalMatrix = gl.getUniformLocation(gl.program,"u_NormalMatrix");
+    if (u_NormalMatrix == null) {
+        console.error("can't find u_NormalMatrix");
+        return;
+    }
 
     gl.clearColor(0.0,0.0,0.0,1.0);
     gl.enable(gl.DEPTH_TEST);
-    
-    var mMatrix = new Matrix4();
-    var vMatrix = new Matrix4();
-    var pMatrix = new Matrix4();
-    var mvpMatrix = new Matrix4();
-    var nMatrix = new Matrix4();
-    
-    gl.uniform3f(u_LightPosition, 0.0, 1.0, 3.0);
-    gl.uniform3f(u_LightColor,1.0,1.0,1.0);
+    gl.uniform3f(u_LightColor,1.0,0.4,0.0);
     gl.uniform3f(u_AmbientLight,0.2,0.2,0.2);
-    var currAngle = 0;
-    var tick = function () {
-        currAngle = animate(currAngle);
-        mMatrix.setTranslate(0,0,0);
-        mMatrix.scale(1.5,1.5,1.5);
-        mMatrix.rotate(currAngle,0,1,0);
-        vMatrix.setLookAt(3,3,7,0,0,0,0,1,0);
-        pMatrix.setPerspective(30,1,1,100);
-        mvpMatrix.set(pMatrix).multiply(vMatrix).multiply(mMatrix);
-        gl.uniformMatrix4fv(u_MvpMatrix,false,mvpMatrix.elements);
-        gl.uniformMatrix4fv(u_ModelMatrix, false, mMatrix.elements);
-        nMatrix.setInverseOf(mMatrix);
-        nMatrix.transpose();
-        gl.uniformMatrix4fv(u_NormalMatrix,false,nMatrix.elements);
-        gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-        gl.drawElements(gl.TRIANGLES,n,gl.UNSIGNED_BYTE,0);
-        requestAnimationFrame(tick);
-    }
-    tick();
+    var lightDirection = new Vector3([0.0,0.0,1.0]);
+    lightDirection.normalize();
+    gl.uniform3fv(u_LightDirection, lightDirection.elements);
+    var vMatrix = new Matrix4();
+    vMatrix.setPerspective(50.0, canvas.width / canvas.height, 1.0, 100.0);
+    vMatrix.lookAt(0.0, 0.0, 30.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    document.onkeydown = function (ev) {
+        keydown(ev,gl,n,u_MvpMatrix,vMatrix,u_NormalMatrix);
+    };
+    draw(gl,n,u_MvpMatrix,vMatrix,u_NormalMatrix);
 }
 
 /**
@@ -130,12 +99,12 @@ function main() {
  */
 function initVertexBuffer(gl) {
     var vertices = new Float32Array([
-        1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, //front面 v0-4
-        1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, //right v0345
-        1.0, 1.0, 1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, //up v0561
-        -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, 1.0, -1.0, //left 
-        -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, //down
-        1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0 //back
+        1.5, 10.0, 1.5, -1.5, 10.0, 1.5, -1.5, 0.0, 1.5, 1.5, 0.0, 1.5, //front
+        1.5, 10.0, -1.5, 1.5, 10.0, 1.5, 1.5, 0.0, 1.5, 1.5, 0.0, -1.5, //right
+        1.5, 10.0, -1.5, -1.5, 10.0, -1.5, -1.5, 10.0, 1.5, 1.5, 10.0, 1.5, //up
+        -1.5, 10.0, 1.5, -1.5, 10.0, -1.5, -1.5, 0.0, -1.5, -1.5, 0.0, 1.5, //left 
+        -1.5, 0.0, -1.5, 1.5, 0.0, -1.5, 1.5, 0.0, 1.5, -1.5, 0.0, 1.5, //down
+        -1.5, 10.0, -1.5, 1.5,10.0,-1.5,1.5,0.0,-1.5, -1.5, 0.0, -1.5 //back
     ]);
     var colors = new Float32Array([
         1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
@@ -161,6 +130,7 @@ function initVertexBuffer(gl) {
         16, 17, 18, 16, 18, 19,
         20, 21, 22, 20, 22, 23
     ]);
+
     
     initArrayBuffers(gl, vertices, 3, gl.FLOAT, "a_Position");
     initArrayBuffers(gl, colors, 3, gl.FLOAT, "a_Color");
@@ -204,15 +174,73 @@ function initArrayBuffers(gl,data,num,type,attribute) {
     gl.enableVertexAttribArray(a_attribute);
 }
 
-// 动画函数
-// 计算下一帧的变化角度
-var TIMESTAMP = Date.now();
-var STEP = 30 // 30度/s
-function animate (angle) {
-    var now = Date.now();
-    var time_temp = Date.now() - TIMESTAMP; //两帧之间时间差
-    TIMESTAMP = now;
 
-    var newAngle = angle + (time_temp * STEP) / 1000;
-    return newAngle;
+var ANGLE_STEP = 3.0;
+var g_arm1Angle = -90.0;
+var g_joint1Angle = 0.0;
+/**
+ * 
+ * @param {*} ev 
+ * @param {*} gl 
+ * @param {*} n 
+ */
+function keydown(ev,gl,n,u_MvpMatrix,vMatrix, u_NormalMatrix){
+    switch (ev.keyCode) {
+        case 38: // Up
+          if (g_joint1Angle < 135.0) g_joint1Angle += ANGLE_STEP;
+          break;
+        case 40: // Down
+          if (g_joint1Angle > -135.0) g_joint1Angle -= ANGLE_STEP;
+          break;
+        case 39: // Right
+          g_arm1Angle = (g_arm1Angle + ANGLE_STEP) % 360;
+          break;
+        case 37: // Left
+          g_arm1Angle = (g_arm1Angle - ANGLE_STEP) % 360;
+          break;
+        default: return;
+    }
+    draw(gl,n,u_MvpMatrix,vMatrix, u_NormalMatrix);
+}
+
+var g_modelMatrix = new Matrix4(), g_mvpMatrix = new Matrix4();
+/**
+ * 
+ * @param {WebGLRenderingContext} gl 
+ * @param {*} n 
+ * @param {*} u_MvpMatrix 
+ * @param {*} mvpMatrix 
+ */
+function draw(gl, n, u_MvpMatrix, vMatrix, u_NormalMatrix) {
+    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+    //arm1
+    var arm1Length = 10.0;
+    g_modelMatrix.setTranslate(0.0, -12.0, 0.0);
+    g_modelMatrix.rotate(g_arm1Angle, 0.0, 1.0, 0.0);
+    drawBox(gl, n, u_MvpMatrix, vMatrix, u_NormalMatrix);
+
+    //arm2
+    g_modelMatrix.translate(0.0, arm1Length, 0.0);
+    g_modelMatrix.rotate(g_joint1Angle,0.0,0.0,1.0);
+    g_modelMatrix.scale(1.3, 1.0, 1.3);
+    drawBox(gl, n, u_MvpMatrix, vMatrix, u_NormalMatrix);
+}
+
+var g_normalMatrix = new Matrix4();
+/**
+ * 
+ * @param {WebGLRenderingContext} gl 
+ * @param {*} n 
+ * @param {*} height 
+ * @param {*} u_MvpMatrix 
+ * @param {*} mvpMatrix 
+ */
+function drawBox(gl, n, u_MvpMatrix, vMatrix, u_NormalMatrix, nMatrix) {
+    g_mvpMatrix.set(vMatrix);
+    g_mvpMatrix.multiply(g_modelMatrix);
+    gl.uniformMatrix4fv(u_MvpMatrix, false, g_mvpMatrix.elements);
+    g_normalMatrix.setInverseOf(g_modelMatrix);
+    g_normalMatrix.transpose();
+    gl.uniformMatrix4fv(u_NormalMatrix, false, g_normalMatrix.elements);
+    gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0);
 }
