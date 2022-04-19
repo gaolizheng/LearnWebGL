@@ -61,3 +61,9 @@
 >当有多个点光源时，就需要在片元着色器中计算每一个点光源对片元的颜色贡献，并将他们全部加起来。
 
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch8_4_PointLightedCube/effect.png)
+
+## ch9_1 单关节模型
+
+>一个关节连接两个手臂，大臂带动小臂，小臂的运动不影响大臂
+
+![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch9_1_JointMode/effect.png)
