@@ -52,3 +52,9 @@
 >将立方体放大一些，比较容易看到立方体上有一些不自然的线条，这是因为我们是通过计算顶点光照颜色然后内差值出每个片元的颜色。
 
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch8_3_PointLightedCube/effect.png)
+
+## ch8_4 使用片元着色器计算光照
+
+>使用片元着色器计算光照与使用顶点着色器区别不大，顶点着色器保留计算顶点世界坐标，计算法向量，片元着色器计算最终颜色。
+
+![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch8_4_PointLightedCube/effect.png)
