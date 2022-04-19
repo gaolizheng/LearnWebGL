@@ -6,18 +6,18 @@
 
 >θ为入射光与表面的夹角，cosθ 可以通过光线方向和法线方向两个向量的点积计算。原理是:
 
->>法向量: **n** = (nx, ny, nz)
+>>法向量: ![](https://latex.codecogs.com/svg.image?\vec{n}=(nx,ny,nz))
 
->>光线向量: **l** = (lx, ly, lz)
+>>光线向量: ![](https://latex.codecogs.com/svg.image?\vec{l}=(lx,ly,lz))
 
->>点积: **n** · **l** = nx * lx + ny * ly + nz * lz
+>>点积: ![](https://latex.codecogs.com/svg.image?\vec{n}\cdot\vec{l}=nx\times&space;lx&plus;ny\times&space;ly&plus;nz\times&space;lz)
 
->>点积: **n** · **l** = ｜**n**｜ * ｜**l**｜ * cosθ
+>>点积: ![](https://latex.codecogs.com/svg.image?\vec{n}\cdot\vec{l}=\left|&space;\vec{n}\right|\cdot\left|&space;\vec{l}\right|\times&space;\cos&space;\theta&space;)
 
->>所以当 ｜**n**｜ 和 ｜**l**｜ 都为1时(将一个向量的长度调整为1的过程叫做归一化)，**n** · **l** 就是cosθ，
+>>所以当![](https://latex.codecogs.com/svg.image?\left|&space;\vec{n}\right|)和![](https://latex.codecogs.com/svg.image?\left|&space;\vec{l}\right|)都为1时(将一个向量的长度调整为1的过程叫做归一化)，![](https://latex.codecogs.com/svg.image?\vec{n}\cdot\vec{l}) 就是cosθ，
 需要注意光线方向实际是光线入射方向的反方向，即从入射点指向光源方向。
 
->>归一化计算方法，以 **n** = (nx, ny, nz) 为例，向量长度 ![](https://latex.codecogs.com/svg.image?m=|\mathbf{n}|=\sqrt{nx^{2}&plus;ny^{2}&plus;nz^{2}})，那么归一化后 **n** = (nx/m, ny/m, nz/m)
+>>归一化计算方法，以 ![](https://latex.codecogs.com/svg.image?\vec{n}&space;=&space;(nx,&space;ny,&space;nz)) 为例，向量长度 ![](https://latex.codecogs.com/svg.image?m=|\mathbf{n}|=\sqrt{nx^{2}&plus;ny^{2}&plus;nz^{2}})，那么归一化后 ![](https://latex.codecogs.com/svg.image?\vec{n}&space;=&space;(nx/m,&space;ny/m,&space;nz/m))
 
 ### <环境反射光颜色> = <入射光颜色> x <表面基底颜色>
 
