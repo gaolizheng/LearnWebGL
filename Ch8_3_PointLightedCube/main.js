@@ -1,17 +1,20 @@
 var VSHADER_SOURCE = 
 'attribute vec4 a_Position;\n'+
 'uniform mat4 u_MvpMatrix;\n'+
+'uniform mat4 u_ModelMatrix;\n'+
 'uniform mat4 u_NormalMatrix;\n'+
 'attribute vec4 a_Color;\n'+
 'attribute vec4 a_Normal;\n'+
 'uniform vec3 u_LightColor;\n'+
-'uniform vec3 u_LightDirection;\n'+
+'uniform vec3 u_LightPosition;\n'+
 'uniform vec3 u_AmbientLight;\n'+
 'varying vec4 v_Color;\n'+
 'void main(){\n'+
 'gl_Position = u_MvpMatrix * a_Position;\n'+
 'vec3 normal = normalize(vec3(u_NormalMatrix * a_Normal));\n'+
-'float nDotL = max(dot(u_LightDirection, normal), 0.0);\n'+
+'vec4 vertexPosition = u_ModelMatrix * a_Position;\n'+
+'vec3 lightDirection = normalize(u_LightPosition - vec3(vertexPosition));\n'+
+'float nDotL = max(dot(lightDirection, normal), 0.0);\n'+
 'vec3 diffuse = u_LightColor * vec3(a_Color) * nDotL;\n'+
 'vec3 ambient = u_AmbientLight * a_Color.rgb;\n'+
 'v_Color = vec4(diffuse + ambient, a_Color.a);\n'+
@@ -54,6 +57,12 @@ function main() {
         return;
     }
 
+    var u_ModelMatrix = gl.getUniformLocation(gl.program,"u_ModelMatrix");
+    if (u_ModelMatrix == null) {
+        console.error("can't find u_ModelMatrix");
+        return;
+    }
+
     var u_NormalMatrix = gl.getUniformLocation(gl.program,"u_NormalMatrix");
     if (u_NormalMatrix == null) {
         console.error("can't find u_NormalMatrix");
@@ -66,9 +75,9 @@ function main() {
         return;
     }
 
-    var u_LightDirection = gl.getUniformLocation(gl.program,"u_LightDirection");
-    if (u_LightDirection == null) {
-        console.error("can't find u_LightDirection");
+    var u_LightPosition = gl.getUniformLocation(gl.program,"u_LightPosition");
+    if (u_LightPosition == null) {
+        console.error("can't find u_LightPosition");
         return;
     }
 
@@ -80,29 +89,27 @@ function main() {
 
     gl.clearColor(0.0,0.0,0.0,1.0);
     gl.enable(gl.DEPTH_TEST);
-    gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-
+    
     var mMatrix = new Matrix4();
-    var nMatrix = new Matrix4();
     var vMatrix = new Matrix4();
     var pMatrix = new Matrix4();
     var mvpMatrix = new Matrix4();
+    var nMatrix = new Matrix4();
     
+    gl.uniform3f(u_LightPosition, 0.0, 2.0, 3.0);
     gl.uniform3f(u_LightColor,1.0,1.0,1.0);
     gl.uniform3f(u_AmbientLight,0.2,0.2,0.2);
-    var lightDirection = new Vector3([0.5,3.0,4.0]);
-    lightDirection.normalize();
-    gl.uniform3fv(u_LightDirection, lightDirection.elements);
-
     var currAngle = 0;
     var tick = function () {
         currAngle = animate(currAngle);
-        mMatrix.setTranslate(0,0.5,0);
-        mMatrix.rotate(currAngle,0,0,1)
+        mMatrix.setTranslate(0,0,0);
+        mMatrix.scale(1.5,1.5,1.5);
+        mMatrix.rotate(currAngle,0,1,0);
         vMatrix.setLookAt(3,3,7,0,0,0,0,1,0);
         pMatrix.setPerspective(30,1,1,100);
         mvpMatrix.set(pMatrix).multiply(vMatrix).multiply(mMatrix);
         gl.uniformMatrix4fv(u_MvpMatrix,false,mvpMatrix.elements);
+        gl.uniformMatrix4fv(u_ModelMatrix, false, mMatrix.elements);
         nMatrix.setInverseOf(mMatrix);
         nMatrix.transpose();
         gl.uniformMatrix4fv(u_NormalMatrix,false,nMatrix.elements);
@@ -111,7 +118,6 @@ function main() {
         requestAnimationFrame(tick);
     }
     tick();
-
 }
 
 /**
@@ -127,14 +133,6 @@ function initVertexBuffer(gl) {
         -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, //down
         1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0 //back
     ]);
-    // var colors = new Float32Array([
-    //     0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, //front
-    //     0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, //right
-    //     1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, //up
-    //     1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, //left
-    //     1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, //btm
-    //     0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0 //back
-    // ]);
     var colors = new Float32Array([
         1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
         1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 

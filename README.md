@@ -24,6 +24,7 @@
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch8_1_LightedCube/effect.png)
 
 ## ch8_2 运动物体的光照效果
+
 >物体的运动会改变每个表面的法向量，平移、旋转和缩放对法向量的影响如下:
 
 >>平移变换不会改变法向量
@@ -36,8 +37,16 @@
 
 >>逆矩阵：如果矩阵**M**的逆矩阵是**R**，那么**M** * **R**或**R** * **M**的结果都是单位矩阵。
 
->>求逆转置矩阵的步骤:1.求原矩阵的逆矩阵。 2.将你矩阵进行转置。
+>>求逆转置矩阵的步骤:1.求原矩阵的逆矩阵。 2.将逆矩阵进行转置。
 
 >待补充数学相关知识
 
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch8_2_LightedMovedCube/effect.png)
+
+## ch8_3 点光源光照
+
+>点光源与平行光的区别在于入射光的角度是随顶点坐标变化的，所以不能指定光源方向，而要指定光源位置，逐顶点计算入射光线方向。
+
+>将立方体放大一些，比较容易看到立方体上有一些不自然的线条，这是因为我们是通过计算顶点光照颜色然后内差值出每个片元的颜色。
+
+![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch8_3_PointLightedCube/effect.png)
