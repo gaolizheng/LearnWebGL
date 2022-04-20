@@ -67,3 +67,7 @@
 >一个关节连接两个手臂，大臂带动小臂，小臂的运动不影响大臂
 
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch9_1_JointMode/effect.png)
+
+## ch10_1 用鼠标控制物体旋转
+
+>用鼠标控制立方体旋转，立方体有纹理贴图，并添加光照。
