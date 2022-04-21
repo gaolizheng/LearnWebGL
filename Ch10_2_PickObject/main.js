@@ -122,7 +122,7 @@ function main() {
     gl.uniform3f(u_LightColor, 1.0, 1.0, 1.0);
     gl.uniform3f(u_LightPosition, 0.0, 0.0, 3.0);
     gl.uniform3f(u_AmbientColor, 0.2, 0.2, 0.2);
-    gl.uniform1i(u_Clicked, 1);
+    gl.uniform1i(u_Clicked, 0);
 
     var texture = gl.createTexture();
     var image = new Image();
@@ -133,8 +133,18 @@ function main() {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
         gl.uniform1f(u_Sampler, 0);
-        startLoop(canvas, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
-        initClick(gl, n, u_Clicked);
+        startLoop(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
+        canvas.onmousedown = function (ev) {
+            var x = ev.clientX, y = ev.clientY;
+            var rect = ev.target.getBoundingClientRect();
+            if ( x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom) {
+                var x_in_canvas = x - rect.left, y_in_canvas = rect.bottom - y;
+                var picked = check(x_in_canvas, y_in_canvas, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix, u_Clicked);
+                if (picked) {
+                    alert("The cube was selected");
+                }
+            }
+        }
     }
     image.crossOrigin = "anonymous"
     image.src = "http://static.yximgs.com/udata/pkg/DDZ/ddzicon_01.jpg";
@@ -143,7 +153,7 @@ function main() {
 var g_XAngle = 0.0;
 var g_YAngle = 0.0;
 var g_Step = 1;
-function startLoop(canvas, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix) {
+function startLoop( gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix) {
     var tick = function () {
         g_XAngle += g_Step;
         g_YAngle += g_Step;
@@ -153,8 +163,18 @@ function startLoop(canvas, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatr
     tick();
 }
 
-function initClick(gl, n, u_Clicked){
-    
+function check(x, y, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix, u_Clicked) {
+    var picked = false;
+    gl.uniform1i(u_Clicked, 1);
+    draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
+    var pixels = new Uint8Array(4);
+    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    if (pixels[0] == 255) {
+        picked = true;
+    }
+    gl.uniform1i(u_Clicked, 0);
+    draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
+    return picked;
 }
 
 function draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix) {
