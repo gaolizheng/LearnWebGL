@@ -15,6 +15,7 @@ var VSHADER_SOURCE =
 'v_TexCoord = a_TexCoord;\n'+
 'v_Position = vec3(u_MMatrix * a_Position);\n'+
 'v_Normal = normalize(u_NormalMatrix * a_Normal);\n'+
+'v_Face = a_Face;\n'+
 '}\n';
 
 var FSHADER_SOURCE = 
@@ -135,7 +136,7 @@ function main() {
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
-        gl.uniform1f(u_Sampler, 0);
+        gl.uniform1i(u_Sampler, 0);
         startLoop(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
         canvas.onmousedown = function (ev) {
             var x = ev.clientX, y = ev.clientY;
