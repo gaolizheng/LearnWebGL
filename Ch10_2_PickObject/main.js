@@ -21,16 +21,21 @@ var FSHADER_SOURCE =
 'uniform vec3 u_LightPosition;\n'+
 'uniform vec3 u_LightColor;\n'+
 'uniform vec3 u_AmbientColor;\n'+
+'uniform bool u_Clicked;\n'+
 'varying vec3 v_Position;\n'+
 'varying vec2 v_TexCoord;\n'+
 'varying vec4 v_Normal;\n'+
 'void main(){\n'+
 'vec3 texColor = vec3(texture2D(u_Sampler, v_TexCoord));\n'+
 'vec3 lightDir = normalize(u_LightPosition - v_Position);\n'+
+'if (u_Clicked) {\n'+
+'gl_FragColor = vec4(1.0,0.0,0.0,1.0);\n'+
+'} else {\n'+
 'vec3 normal = normalize(vec3(v_Normal));\n'+
 'vec3 diffuse = u_LightColor * texColor * max(dot(lightDir, normal), 0.0);\n'+
 'vec3 ambient = u_AmbientColor * texColor;\n'+
 'gl_FragColor = vec4(diffuse + ambient,1.0);\n'+
+'}\n'+
 '}\n';
 
 function main() {
@@ -99,6 +104,12 @@ function main() {
         return;
     }
 
+    var u_Clicked = gl.getUniformLocation(gl.program,"u_Clicked");
+    if (u_Clicked == null) {
+        console.error("can't find u_Clicked");
+        return;
+    }
+    
     gl.clearColor(0.0,0.0,0.0,1.0);
     gl.enable(gl.DEPTH_TEST);
     var vMatrix = new Matrix4();
@@ -111,6 +122,7 @@ function main() {
     gl.uniform3f(u_LightColor, 1.0, 1.0, 1.0);
     gl.uniform3f(u_LightPosition, 0.0, 0.0, 3.0);
     gl.uniform3f(u_AmbientColor, 0.2, 0.2, 0.2);
+    gl.uniform1i(u_Clicked, 1);
 
     var texture = gl.createTexture();
     var image = new Image();
@@ -121,54 +133,28 @@ function main() {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
         gl.uniform1f(u_Sampler, 0);
-        startLoop(canvas, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix); 
+        startLoop(canvas, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
+        initClick(gl, n, u_Clicked);
     }
     image.crossOrigin = "anonymous"
     image.src = "http://static.yximgs.com/udata/pkg/DDZ/ddzicon_01.jpg";
 }
 
+var g_XAngle = 0.0;
+var g_YAngle = 0.0;
+var g_Step = 1;
 function startLoop(canvas, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix) {
-    initEventHandlers(canvas);
     var tick = function () {
+        g_XAngle += g_Step;
+        g_YAngle += g_Step;
         draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
         requestAnimationFrame(tick);
     }
     tick();
 }
 
-var g_XAngle = 0.0;
-var g_YAngle = 0.0;
-
-function initEventHandlers(canvas) {
-    var dragging = false;
-    var lastX = -1, lastY = -1;
-    canvas.onmousedown = function (ev) {
-        var x = ev.clientX, y = ev.clientY;
-        var rect = ev.target.getBoundingClientRect();
-        if (x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom) {
-            lastX = x;
-            lastY = y;
-            dragging = true;
-        }
-    }
-
-    canvas.onmouseup = function (ev) {
-        dragging = false;
-    }
-
-    canvas.onmousemove = function (ev) {
-        var x = ev.clientX, y = ev.clientY;
-        if (dragging) {
-            var factor = 100 / canvas.height;
-            var dx = factor * (x - lastX);
-            var dy = factor * (y - lastY);
-            // g_XAngle = Math.max(Math.min(g_XAngle + dx, -90.0), 90.0);
-            // g_YAngle = Math.max(Math.min(g_YAngle + dy, -90.0), 90.0);
-            g_XAngle += dy;
-            g_YAngle += dx;
-        }
-        lastX = x, lastY = y;
-    }
+function initClick(gl, n, u_Clicked){
+    
 }
 
 function draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix) {
@@ -177,6 +163,7 @@ function draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix) {
     var mvpMatrix = new Matrix4();
     mMatrix.setRotate(g_XAngle,1.0,0.0,0.0);
     mMatrix.rotate(g_YAngle,0.0,1.0,0.0);
+    mMatrix.scale(0.5,0.5,0.5);
     gl.uniformMatrix4fv(u_MMatrix, false, mMatrix.elements);
     var normalMatrix = new Matrix4();
     normalMatrix.setInverseOf(mMatrix);
