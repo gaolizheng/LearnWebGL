@@ -1,21 +1,18 @@
 var VSHADER_SOURCE = 
 'attribute vec4 a_Position;\n'+
-'attribute vec2 a_TexCoord;\n'+
+'attribute vec3 a_TexCoord;\n'+
 'attribute vec4 a_Normal;\n'+
-'attribute float a_Face;\n'+
 'uniform mat4 u_MvpMatrix;\n'+
 'uniform mat4 u_MMatrix;\n'+
 'uniform mat4 u_NormalMatrix;\n'+
-'varying vec2 v_TexCoord;\n'+
+'varying vec3 v_TexCoord;\n'+
 'varying vec3 v_Position;\n'+
 'varying vec4 v_Normal;\n'+
-'varying float v_Face;\n'+
 'void main(){\n'+
 'gl_Position = u_MvpMatrix * a_Position;\n'+
 'v_TexCoord = a_TexCoord;\n'+
 'v_Position = vec3(u_MMatrix * a_Position);\n'+
 'v_Normal = normalize(u_NormalMatrix * a_Normal);\n'+
-'v_Face = a_Face;\n'+
 '}\n';
 
 var FSHADER_SOURCE = 
@@ -24,21 +21,24 @@ var FSHADER_SOURCE =
 'uniform vec3 u_LightPosition;\n'+
 'uniform vec3 u_LightColor;\n'+
 'uniform vec3 u_AmbientColor;\n'+
-'uniform bool u_Clicked;\n'+
+'uniform int u_PickedFace;\n'+
 'varying vec3 v_Position;\n'+
-'varying vec2 v_TexCoord;\n'+
+'varying vec3 v_TexCoord;\n'+
 'varying vec4 v_Normal;\n'+
-'varying float v_Face;\n'+
 'void main(){\n'+
-'vec3 texColor = vec3(texture2D(u_Sampler, v_TexCoord));\n'+
+'vec3 texColor = vec3(texture2D(u_Sampler, vec2(v_TexCoord)));\n'+
 'vec3 lightDir = normalize(u_LightPosition - v_Position);\n'+
-'if (u_Clicked) {\n'+
-'gl_FragColor = vec4(1.0,0.0,0.0,1.0);\n'+
-'} else {\n'+
 'vec3 normal = normalize(vec3(v_Normal));\n'+
 'vec3 diffuse = u_LightColor * texColor * max(dot(lightDir, normal), 0.0);\n'+
 'vec3 ambient = u_AmbientColor * texColor;\n'+
-'gl_FragColor = vec4(diffuse + ambient,1.0);\n'+
+'vec4 color = vec4(diffuse + ambient,1.0);\n'+
+'if(u_PickedFace == int(v_TexCoord.z)){;\n'+
+'color = vec4(1.0);\n'+
+'};\n'+
+'if (u_PickedFace == 0) {\n'+
+'gl_FragColor = vec4(color.rgb,v_TexCoord.z / 255.0);\n'+
+'} else {\n'+
+'gl_FragColor = vec4(color);\n'+
 '}\n'+
 '}\n';
 
@@ -108,9 +108,9 @@ function main() {
         return;
     }
 
-    var u_Clicked = gl.getUniformLocation(gl.program,"u_Clicked");
-    if (u_Clicked == null) {
-        console.error("can't find u_Clicked");
+    var u_PickedFace = gl.getUniformLocation(gl.program,"u_PickedFace");
+    if (u_PickedFace == null) {
+        console.error("can't find u_PickedFace");
         return;
     }
     
@@ -126,8 +126,8 @@ function main() {
     gl.uniform3f(u_LightColor, 1.0, 1.0, 1.0);
     gl.uniform3f(u_LightPosition, 0.0, 0.0, 3.0);
     gl.uniform3f(u_AmbientColor, 0.2, 0.2, 0.2);
-    gl.uniform1i(u_Clicked, 0);
-
+    gl.uniform1i(u_PickedFace, -1);
+    
     var texture = gl.createTexture();
     var image = new Image();
     image.onload = function () {
@@ -143,10 +143,9 @@ function main() {
             var rect = ev.target.getBoundingClientRect();
             if ( x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom) {
                 var x_in_canvas = x - rect.left, y_in_canvas = rect.bottom - y;
-                var picked = check(x_in_canvas, y_in_canvas, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix, u_Clicked);
-                if (picked) {
-                    alert("The cube was selected");
-                }
+                var face = check(x_in_canvas, y_in_canvas, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix, u_PickedFace);
+                gl.uniform1i(u_PickedFace, face);
+                draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
             }
         }
     }
@@ -167,18 +166,12 @@ function startLoop( gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix) {
     tick();
 }
 
-function check(x, y, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix, u_Clicked) {
-    var picked = false;
-    gl.uniform1i(u_Clicked, 1);
+function check(x, y, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix, u_PickedFace) {
+    gl.uniform1i(u_PickedFace, 0);
     draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
     var pixels = new Uint8Array(4);
     gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-    if (pixels[0] == 255) {
-        picked = true;
-    }
-    gl.uniform1i(u_Clicked, 0);
-    draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
-    return picked;
+    return pixels[3];
 }
 
 function draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix) {
@@ -212,21 +205,13 @@ function initVertexBuffer(gl) {
         -1.0,-1.0,-1.0, 1.0,-1.0,-1.0, 1.0,-1.0,1.0, -1.0,-1.0,1.0,// 下 v7v5v3v2 20,21,22,23
     ]);
     var uvs = new Float32Array([
-        1.0,1.0, 0.0,1.0, 0.0,0.0, 1.0,0.0,
-        1.0,1.0, 0.0,1.0, 0.0,0.0, 1.0,0.0,
-        1.0,1.0, 0.0,1.0, 0.0,0.0, 1.0,0.0,
-        1.0,1.0, 0.0,1.0, 0.0,0.0, 1.0,0.0,
-        1.0,1.0, 0.0,1.0, 0.0,0.0, 1.0,0.0,
-        1.0,1.0, 0.0,1.0, 0.0,0.0, 1.0,0.0,
+        1.0,1.0,1.0, 0.0,1.0,1.0, 0.0,0.0,1.0, 1.0,0.0,1.0,
+        1.0,1.0,2.0, 0.0,1.0,2.0, 0.0,0.0,2.0, 1.0,0.0,2.0,
+        1.0,1.0,3.0, 0.0,1.0,3.0, 0.0,0.0,3.0, 1.0,0.0,3.0,
+        1.0,1.0,4.0, 0.0,1.0,4.0, 0.0,0.0,4.0, 1.0,0.0,4.0,
+        1.0,1.0,5.0, 0.0,1.0,5.0, 0.0,0.0,5.0, 1.0,0.0,5.0,
+        1.0,1.0,6.0, 0.0,1.0,6.0, 0.0,0.0,6.0, 1.0,0.0,6.0,
     ]);
-    var faces = new Uint8Array([
-        1, 1, 1, 1,
-        2, 2, 2, 2,
-        3, 3, 3, 3,
-        4, 4, 4, 4,
-        5, 5, 5, 5,
-        6, 6, 6, 6
-    ])
     var normals = new Float32Array([
         0.0,0.0,1.0, 0.0,0.0,1.0, 0.0,0.0,1.0, 0.0,0.0,1.0, // 前 v0v1v2v3 0,1,2,3
         1.0,0.0,0.0, 1.0,0.0,0.0, 1.0,0.0,0.0, 1.0,0.0,0.0, // 右 v4v0v3v5 4,5,6,7
@@ -245,8 +230,7 @@ function initVertexBuffer(gl) {
     ]);
 
     initArrayBuffers(gl, vertices, 3, gl.FLOAT, "a_Position");
-    initArrayBuffers(gl, faces, 1, gl.UNSIGNED_BYTE, "a_Face");
-    initArrayBuffers(gl, uvs, 2, gl.FLOAT, "a_TexCoord");
+    initArrayBuffers(gl, uvs, 3, gl.FLOAT, "a_TexCoord");
     initArrayBuffers(gl, normals, 3, gl.FLOAT, "a_Normal");
 
     var indexBuffer = gl.createBuffer();
