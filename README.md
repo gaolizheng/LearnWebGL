@@ -81,3 +81,17 @@
 >点击立方体的某一个面，被点中的面变成白色，其他面颜色不变。实现方式与ch10_2类似，首先将每个面的索引值1-6传入着色器程序，当点中立方体时，就将面的索引值写入颜色的alpha分量，然后读取点击位置颜色的alpha分量来确定点击的是哪个面，再将此值传如着色器与面的索引值比对，相同则用白色，不同则用原颜色。
 
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_3_PickFace/effect.png)
+
+## ch10_4 雾化
+
+>远处的物体看上去较为模糊的现象叫做雾化。
+
+>使用线性雾化方式，即某一点的雾化程度取决于它与视点之间的距离，距离越远雾化程度越高。线性雾化有起点和终点，起点代表开始雾化之处，终点表示完全雾化之处。某一点的雾化程度被定义为雾化因子
+
+>><雾化因子> = (<终点> - <当前点与视点的距离>)/(<终点> - <起点>)
+
+>让立方体延Z轴移动，看到其雾化程度加深
+
+![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_4_Fog/effect1.png)
+
+![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_4_Fog/effect2.png)

@@ -2,17 +2,20 @@ var VSHADER_SOURCE =
 'attribute vec4 a_Position;\n'+
 'uniform mat4 u_MvpMatrix;\n'+
 'uniform mat4 u_MMatrix;\n'+
+'uniform vec3 u_Eye;\n'+ // 视点位置
 'uniform mat4 u_NormalMatrix;\n'+
 'attribute vec2 a_TexCoord;\n'+
 'attribute vec4 a_Normal;\n'+
 'varying vec2 v_TexCoord;\n'+
 'varying vec3 v_Position;\n'+
 'varying vec4 v_Normal;\n'+
+'varying float v_Dist;\n'+ // 点距离视点的距离
 'void main(){\n'+
 'gl_Position = u_MvpMatrix * a_Position;\n'+
 'v_TexCoord = a_TexCoord;\n'+
 'v_Position = vec3(u_MMatrix * a_Position);\n'+
 'v_Normal = normalize(u_NormalMatrix * a_Normal);\n'+
+'v_Dist = distance(v_Position, u_Eye);\n'+
 '}\n';
 
 var FSHADER_SOURCE = 
@@ -21,21 +24,21 @@ var FSHADER_SOURCE =
 'uniform vec3 u_LightPosition;\n'+
 'uniform vec3 u_LightColor;\n'+
 'uniform vec3 u_AmbientColor;\n'+
-'uniform bool u_Clicked;\n'+
+'uniform vec3 u_FogColor;\n'+ // 雾的颜色
+'uniform vec2 u_FogDist;\n'+ // 雾化的起点和终点
 'varying vec3 v_Position;\n'+
 'varying vec2 v_TexCoord;\n'+
 'varying vec4 v_Normal;\n'+
+'varying float v_Dist;\n'+ // 点距离视点的距离
 'void main(){\n'+
 'vec3 texColor = vec3(texture2D(u_Sampler, v_TexCoord));\n'+
 'vec3 lightDir = normalize(u_LightPosition - v_Position);\n'+
-'if (u_Clicked) {\n'+
-'gl_FragColor = vec4(1.0,0.0,0.0,1.0);\n'+
-'} else {\n'+
 'vec3 normal = normalize(vec3(v_Normal));\n'+
 'vec3 diffuse = u_LightColor * texColor * max(dot(lightDir, normal), 0.0);\n'+
 'vec3 ambient = u_AmbientColor * texColor;\n'+
-'gl_FragColor = vec4(diffuse + ambient,1.0);\n'+
-'}\n'+
+'float fogFactor = clamp((u_FogDist.y - v_Dist)/(u_FogDist.y - u_FogDist.x),0.0,1.0);\n'+
+'vec3 color = mix(u_FogColor, diffuse + ambient, fogFactor);\n'+
+'gl_FragColor = vec4(color, 1.0);\n'+
 '}\n';
 
 function main() {
@@ -104,9 +107,21 @@ function main() {
         return;
     }
 
-    var u_Clicked = gl.getUniformLocation(gl.program,"u_Clicked");
-    if (u_Clicked == null) {
-        console.error("can't find u_Clicked");
+    var u_Eye = gl.getUniformLocation(gl.program,"u_Eye");
+    if (u_Eye == null) {
+        console.error("can't find u_Eye");
+        return;
+    }
+
+    var u_FogColor = gl.getUniformLocation(gl.program,"u_FogColor");
+    if (u_FogColor == null) {
+        console.error("can't find u_FogColor");
+        return;
+    }
+
+    var u_FogDist = gl.getUniformLocation(gl.program,"u_FogDist");
+    if (u_FogDist == null) {
+        console.error("can't find u_FogDist");
         return;
     }
     
@@ -116,14 +131,17 @@ function main() {
     var pMatrix = new Matrix4();
     var vpMatrix = new Matrix4();
     vMatrix.setLookAt(0,0,7,0,0,0,0,1,0);
+    gl.uniform3f(u_Eye,0.0,0.0,7.0);
     pMatrix.setPerspective(30,1,1,100);
     vpMatrix.set(pMatrix).multiply(vMatrix);
 
     gl.uniform3f(u_LightColor, 1.0, 1.0, 1.0);
     gl.uniform3f(u_LightPosition, 0.0, 0.0, 3.0);
     gl.uniform3f(u_AmbientColor, 0.2, 0.2, 0.2);
-    gl.uniform1i(u_Clicked, 0);
-
+    gl.uniform3f(u_FogColor, 0.137, 0.231, 0.423);
+    var fog1 = 1.0;
+    var fog2 = 15.0;
+    gl.uniform2f(u_FogDist,fog1,fog2);
     var texture = gl.createTexture();
     var image = new Image();
     image.onload = function () {
@@ -134,55 +152,43 @@ function main() {
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
         gl.uniform1i(u_Sampler, 0);
         startLoop(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
-        canvas.onmousedown = function (ev) {
-            var x = ev.clientX, y = ev.clientY;
-            var rect = ev.target.getBoundingClientRect();
-            if ( x >= rect.left && x < rect.right && y >= rect.top && y < rect.bottom) {
-                var x_in_canvas = x - rect.left, y_in_canvas = rect.bottom - y;
-                var picked = check(x_in_canvas, y_in_canvas, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix, u_Clicked);
-                if (picked) {
-                    alert("The cube was selected");
-                }
-            }
+
+        canvas.onkeydown = function (ev) {
+            switch (ev.code) {
+                case 38:
+                    fog2  += 1;
+                  break;
+                case 40:
+                  if (fog2 > fog1){
+                    fog2 -= 1;
+                  }
+                  break;
+              }
+            gl.uniform2f(u_FogDist,fog1,fog2);
         }
     }
     image.crossOrigin = "anonymous"
     image.src = "http://static.yximgs.com/udata/pkg/DDZ/ddzicon_01.jpg";
 }
 
-var g_XAngle = 0.0;
-var g_YAngle = 0.0;
-var g_Step = 1;
+var g_Step = 0.02;
+var g_translate = 0;
 function startLoop( gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix) {
     var tick = function () {
-        g_XAngle += g_Step;
-        g_YAngle += g_Step;
+        g_translate -= g_Step;
+        g_translate %= -8;
         draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
         requestAnimationFrame(tick);
     }
     tick();
 }
 
-function check(x, y, gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix, u_Clicked) {
-    var picked = false;
-    gl.uniform1i(u_Clicked, 1);
-    draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
-    var pixels = new Uint8Array(4);
-    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-    if (pixels[0] == 255) {
-        picked = true;
-    }
-    gl.uniform1i(u_Clicked, 0);
-    draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix);
-    return picked;
-}
-
 function draw(gl, n, u_MvpMatrix, vpMatrix, u_MMatrix, u_NormalMatrix) {
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     var mMatrix = new Matrix4();
     var mvpMatrix = new Matrix4();
-    mMatrix.setRotate(g_XAngle,1.0,0.0,0.0);
-    mMatrix.rotate(g_YAngle,0.0,1.0,0.0);
+    mMatrix.setRotate(45,1.0,0.0,0.0);
+    mMatrix.translate(0,-2,g_translate);
     mMatrix.scale(0.5,0.5,0.5);
     gl.uniformMatrix4fv(u_MMatrix, false, mMatrix.elements);
     var normalMatrix = new Matrix4();
