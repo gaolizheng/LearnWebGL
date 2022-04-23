@@ -101,3 +101,9 @@
 >开启颜色混合需要调用gl.enable(gl.BLEND)方法，并使用gl.blendFunc方法指定混合函数
 
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_5_Blend/effect.png)
+
+## ch10_6 多个Shader
+
+>使用多个Shader需要创建多个program，并按需要切换program
+
+![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_6_ChangeShader/effect.png)
