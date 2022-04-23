@@ -95,3 +95,9 @@
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_4_Fog/effect1.png)
 
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_4_Fog/effect2.png)
+
+## ch10_5 颜色混合
+
+>开启颜色混合需要调用gl.enable(gl.BLEND)方法，并使用gl.blendFunc方法指定混合函数
+
+![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_5_Blend/effect.png)
