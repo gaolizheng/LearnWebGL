@@ -118,6 +118,13 @@
 
 >>帧缓冲区的每个关联对象可以是两种类型的：纹理对象或者渲染缓冲区对象(RenderBuffer Object)
 
->>使用帧缓冲区的步骤：1.创建帧缓冲区对象(gl.createFramebuffer()) 2.创建纹理对象并设置其尺寸和参数(gl.createTexture()、gl.bindTexture()、gl.texImage2D()、gl.Parameteri()) 3.创建渲染缓冲区对象(gl.createRenderbuffer()) 4.绑定渲染缓冲区对象并设置其尺寸(gl.bindRenderbuffer()、gl.renderbufferStorage()) 5.将帧缓冲区的颜色关联对象指定为一个纹理对象(gl.framebufferTexture2D()) 6.将帧缓冲区的深度关联对象指定为一个渲染缓冲区对象(gl.framebufferRenderbuffer()) 7.检查帧缓冲区是否正确配置(gl.checkFramebufferStatus())
+使用帧缓冲区的步骤：
+1.创建帧缓冲区对象(gl.createFramebuffer()) 
+2.创建纹理对象并设置其尺寸和参数(gl.createTexture()、gl.bindTexture()、gl.texImage2D()、gl.Parameteri()) 
+3.创建渲染缓冲区对象(gl.createRenderbuffer()) 
+4.绑定渲染缓冲区对象并设置其尺寸(gl.bindRenderbuffer()、gl.renderbufferStorage()) 
+5.将帧缓冲区的颜色关联对象指定为一个纹理对象(gl.framebufferTexture2D()) 
+6.将帧缓冲区的深度关联对象指定为一个渲染缓冲区对象(gl.framebufferRenderbuffer()) 
+7.检查帧缓冲区是否正确配置(gl.checkFramebufferStatus())
 
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_7_FrameBuffer/effect.png)
