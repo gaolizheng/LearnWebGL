@@ -3,7 +3,7 @@ var Plane_VSHADER_SOURCE =
     'attribute vec2 a_TexCoord;\n' +
     'varying vec2 v_TexCoord;\n' +
     'void main(){\n' +
-    'gl_Position = u_MvpMatrix * a_Position;\n' +
+    'gl_Position = a_Position;\n' +
     'v_TexCoord = a_TexCoord;\n' +
     '}\n';
 
@@ -90,8 +90,6 @@ function main() {
     var plane = initPlaneBuffer(gl);
     var texCube = initTexBuffer(gl);
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.enable(gl.DEPTH_TEST);
     var vMatrix = new Matrix4();
     var pMatrix = new Matrix4();
     var vpMatrix = new Matrix4();
@@ -100,20 +98,21 @@ function main() {
     vpMatrix.set(pMatrix).multiply(vMatrix);
 
     var planeVPMatrix = new Matrix4();
-    planeVPMatrix.setPerspective(30, OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT, 1, 100);
-    planeVPMatrix.lookAt(0.0, 2.0, 7.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    planeVPMatrix.setPerspective(30, canvas.width / canvas.height, 1, 100);
+    planeVPMatrix.lookAt(0.0, 0.0, 7.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
     var cubeVPMatrix = new Matrix4();
     cubeVPMatrix.setPerspective(30, OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT, 1, 100);
     cubeVPMatrix.lookAt(0.0, 2.0, 7.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
     var texture = initTextures(gl, cubeProgram);
+    var fbo = initFrameBuffer(gl);
+
+    gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.CULL_FACE);
     var tick = function () {
-        g_XAngle += g_Step;
-        g_YAngle += g_Step;
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        drawplane(gl, planeProgram, plane, vpMatrix);
-        drawTexCube(gl, cubeProgram, texCube, texture, vpMatrix);
+        drawTexCube(gl, cubeProgram, texCube, texture, cubeVPMatrix, fbo);
+        drawPlane(gl, planeProgram, plane, fbo.texture, planeVPMatrix, canvas);
         requestAnimationFrame(tick);
     }
     tick();
@@ -122,49 +121,45 @@ function main() {
 /**
  * 
  * @param {WebGLRenderingContext} gl 
- * @param {*} planeProgram 
+ * @param {*} program 
  * @param {*} plane 
  * @param {*} vpMatrix 
  */
-function drawplane(gl, program, cube, vpMatrix) {
+function drawPlane(gl, program, plane, texture, planeVPMatrix, canvas) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // 此处清理的是FrameBuffer中的颜色缓冲区和深度缓冲区
     gl.useProgram(program);
-    initAttributeVariable(gl, program.a_Position, cube.vertexBuffer);
-    initAttributeVariable(gl, program.a_Normal, cube.normalBuffer);
-    initAttributeVariable(gl, program.a_Color, cube.colorBuffer);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cube.indexBuffer);
-    drawCube(gl, program, cube, vpMatrix, -4.0);
-}
-
-/**
- * 
- * @param {WebGLRenderingContext} gl 
- * @param {*} cubeProgram 
- * @param {*} texCube 
- * @param {*} vpMatrix 
- */
-function drawTexCube(gl, program, cube, texture, vpMatrix) {
-    gl.useProgram(program);
-    initAttributeVariable(gl, program.a_Position, cube.vertexBuffer);
-    initAttributeVariable(gl, program.a_Normal, cube.normalBuffer);
-    initAttributeVariable(gl, program.a_TexCoord, cube.uvBuffer);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, cube.indexBuffer);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, texture);
-    drawCube(gl, program, cube, vpMatrix, 4.0);
+    initAttributeVariable(gl, program.a_Position, plane.vertexBuffer);
+    initAttributeVariable(gl, program.a_TexCoord, plane.uvBuffer);
+    gl.uniformMatrix4fv(program.u_MvpMatrix, false, planeVPMatrix.elements);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, plane.indexBuffer);
+    drawTextureObject(gl, texture, plane.numIndices);
 }
 
 /**
  * 
  * @param {WebGLRenderingContext} gl 
  * @param {*} program 
- * @param {*} cube 
+ * @param {*} texCube 
  * @param {*} vpMatrix 
  */
-function drawCube(gl, program, cube, vpMatrix, x) {
+function drawTexCube(gl, program, texCube, texture, cubeVPMatrix, fbo) {
+    g_XAngle += g_Step;
+    g_YAngle += g_Step;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.viewport(0, 0, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
+    gl.clearColor(0.4, 0.2, 0.2, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); // 此处清理的是FrameBuffer中的颜色缓冲区和深度缓冲区
+    gl.useProgram(program);
+    initAttributeVariable(gl, program.a_Position, texCube.vertexBuffer);
+    initAttributeVariable(gl, program.a_Normal, texCube.normalBuffer);
+    initAttributeVariable(gl, program.a_TexCoord, texCube.uvBuffer);
+
     var mMatrix = new Matrix4();
     var mvpMatrix = new Matrix4();
-    mMatrix.setTranslate(x, 0, 0);
-    mMatrix.rotate(g_XAngle, 1.0, 0.0, 0.0);
+    mMatrix.setRotate(g_XAngle, 1.0, 0.0, 0.0);
     mMatrix.rotate(g_YAngle, 0.0, 1.0, 0.0);
 
     gl.uniformMatrix4fv(program.u_MMatrix, false, mMatrix.elements);
@@ -172,14 +167,21 @@ function drawCube(gl, program, cube, vpMatrix, x) {
     normalMatrix.setInverseOf(mMatrix);
     normalMatrix.transpose();
     gl.uniformMatrix4fv(program.u_NormalMatrix, false, normalMatrix.elements)
-    mvpMatrix.set(vpMatrix).multiply(mMatrix);
+    mvpMatrix.set(cubeVPMatrix).multiply(mMatrix);
     gl.uniformMatrix4fv(program.u_MvpMatrix, false, mvpMatrix.elements);
 
-    gl.uniform3f(program.u_AmbientColor, 0.2, 0.2, 0.2);
-    gl.uniform3f(program.u_LightPosition, 0.0, 0.0, 3.0);
-    gl.uniform3f(program.u_LightColor, 1.0, 1.0, 1.0);
+    // gl.uniform3f(program.u_AmbientColor, 0.2, 0.2, 0.2);
+    // gl.uniform3f(program.u_LightPosition, 0.0, 0.0, 3.0);
+    // gl.uniform3f(program.u_LightColor, 1.0, 1.0, 1.0);
 
-    gl.drawElements(gl.TRIANGLES, cube.numIndices, gl.UNSIGNED_BYTE, 0);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, texCube.indexBuffer);
+    drawTextureObject(gl, texture, texCube.numIndices);
+}
+
+function drawTextureObject(gl, texture, n) {
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0);
 }
 
 /**
@@ -196,13 +198,17 @@ function initAttributeVariable(gl, attr, buffer) {
 
 function initPlaneBuffer(gl) {
     var vertices = new Float32Array([
-        1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
+        0.5, 0.5, 0.0, -0.5, 0.5, 0.0, -0.5, -0.5, 0.0, 0.5, -0.5, 0.0,
     ]);
+    var uvs = new Float32Array([
+        1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
+    ])
     var indices = new Uint8Array([
         0, 1, 2, 0, 2, 3,
     ]);
     var o = new Object();
     o.vertexBuffer = initArrayBufferForLaterUse(gl, vertices, 3, gl.FLOAT);
+    o.uvBuffer = initArrayBufferForLaterUse(gl, uvs, 2, gl.FLOAT);
     o.indexBuffer = initElementArrayBufferForLaterUse(gl, indices, gl.UNSIGNED_BYTE);
     o.numIndices = indices.length;
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -230,7 +236,7 @@ function initTexBuffer(gl) {
         1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
         1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
         1.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
-    ])
+    ]);
     var normals = new Float32Array([
         0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, // 前 v0v1v2v3 0,1,2,3
         1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, // 右 v4v0v3v5 4,5,6,7
@@ -305,4 +311,62 @@ function initTextures(gl, program) {
     image.crossOrigin = "anonymous"
     image.src = "http://static.yximgs.com/udata/pkg/DDZ/ddzicon_01.jpg";
     return texture;
+}
+
+/**
+ * 
+ * @param {WebGLRenderingContext} gl 
+ */
+function initFrameBuffer(gl) {
+    var frameBuffer, texture, depthBuffer;
+    var error = function () {
+        if (frameBuffer) {
+            gl.deleteFramebuffer(frameBuffer);
+        }
+        if (texture) {
+            gl.deleteTexture(texture);
+        }
+        if (depthBuffer) {
+            gl.deleteRenderbuffer(depthBuffer);
+        }
+        return null;
+    }
+    frameBuffer = gl.createFramebuffer();
+    if (!frameBuffer) {
+        console.error("Failed to create frame buffer object!");
+        return error();
+    }
+    texture = gl.createTexture();
+    if (!texture) {
+        console.error("Failed to create texture object!");
+        return error();
+    }
+    depthBuffer = gl.createRenderbuffer();
+    if (!depthBuffer) {
+        console.error("Failed to create depthBuffer object!");
+        return error();
+    }
+    // 绑定纹理
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    // 设置相关属性，并传入空数据
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    frameBuffer.texture = texture;
+
+    gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
+
+    var e = gl.checkFramebufferStatus(gl.FRAMEBUFFER);
+    if (e != gl.FRAMEBUFFER_COMPLETE) {
+        console.log('Frame buffer object is incomplete: ' + e.toString());
+        return error();
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, null);
+    return frameBuffer;
 }

@@ -107,3 +107,17 @@
 >使用多个Shader需要创建多个program，并按需要切换program
 
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_6_ChangeShader/effect.png)
+
+## ch10_7 使用FrameBuffer渲染内容到纹理（离屏渲染）
+
+>之前都是将内容渲染到颜色缓冲区然后显示到屏幕上，还可以通过使用帧缓冲区将内容渲染成一张纹理再贴到其他物体上。
+
+>帧缓冲区对象(FrameBuffer Object)可以用来替代颜色缓冲区或深度缓冲区，绘制到帧缓冲区的内容不直接显示到canvas上，你可以先对帧缓冲区中的内容做一些处理再显示，或者直接使用其中的内容作为纹理对象。在帧缓冲区中进行绘制的过程又称为离屏渲染。
+
+>>当使用帧缓冲区时，绘制并不是直接发生在其中的，而是发生在帧缓冲区所关联的对象上。一个帧缓冲区有3个关联对象：颜色关联对象、深度关联对象和模版关联对象，分别用来替代颜色缓冲区、深度缓冲区和模版缓冲区。
+
+>>帧缓冲区的每个关联对象可以是两种类型的：纹理对象或者渲染缓冲区对象(RenderBuffer Object)
+
+>>使用帧缓冲区的步骤：1.创建帧缓冲区对象(gl.createFramebuffer()) 2.创建纹理对象并设置其尺寸和参数(gl.createTexture()、gl.bindTexture()、gl.texImage2D()、gl.Parameteri()) 3.创建渲染缓冲区对象(gl.createRenderbuffer()) 4.绑定渲染缓冲区对象并设置其尺寸(gl.bindRenderbuffer()、gl.renderbufferStorage()) 5.将帧缓冲区的颜色关联对象指定为一个纹理对象(gl.framebufferTexture2D()) 6.将帧缓冲区的深度关联对象指定为一个渲染缓冲区对象(gl.framebufferRenderbuffer()) 7.检查帧缓冲区是否正确配置(gl.checkFramebufferStatus())
+
+![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_7_FrameBuffer/effect.png)
