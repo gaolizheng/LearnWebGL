@@ -1,31 +1,31 @@
-var VSHADER_SOURCE = 
-'attribute vec4 a_Position;\n'+
-'uniform mat4 u_MvpMatrix;\n'+
-'uniform mat4 u_ModelMatrix;\n'+
-'uniform mat4 u_NormalMatrix;\n'+
-'attribute vec4 a_Color;\n'+
-'attribute vec4 a_Normal;\n'+
-'uniform vec3 u_LightColor;\n'+
-'uniform vec3 u_LightPosition;\n'+
-'uniform vec3 u_AmbientLight;\n'+
-'varying vec4 v_Color;\n'+
-'void main(){\n'+
-'gl_Position = u_MvpMatrix * a_Position;\n'+
-'vec3 normal = normalize(vec3(u_NormalMatrix * a_Normal));\n'+
-'vec4 vertexPosition = u_ModelMatrix * a_Position;\n'+
-'vec3 lightDirection = normalize(u_LightPosition - vec3(vertexPosition));\n'+
-'float nDotL = max(dot(lightDirection, normal), 0.0);\n'+
-'vec3 diffuse = u_LightColor * vec3(a_Color) * nDotL;\n'+
-'vec3 ambient = u_AmbientLight * a_Color.rgb;\n'+
-'v_Color = vec4(diffuse + ambient, a_Color.a);\n'+
-'}\n';
+var VSHADER_SOURCE =
+    'attribute vec4 a_Position;\n' +
+    'uniform mat4 u_MvpMatrix;\n' +
+    'uniform mat4 u_ModelMatrix;\n' +
+    'uniform mat4 u_NormalMatrix;\n' +
+    'attribute vec4 a_Color;\n' +
+    'attribute vec4 a_Normal;\n' +
+    'uniform vec3 u_LightColor;\n' +
+    'uniform vec3 u_LightPosition;\n' +
+    'uniform vec3 u_AmbientLight;\n' +
+    'varying vec4 v_Color;\n' +
+    'void main(){\n' +
+    'gl_Position = u_MvpMatrix * a_Position;\n' +
+    'vec3 normal = normalize(vec3(u_NormalMatrix * a_Normal));\n' +
+    'vec4 vertexPosition = u_ModelMatrix * a_Position;\n' +
+    'vec3 lightDirection = normalize(u_LightPosition - vec3(vertexPosition));\n' +
+    'float nDotL = max(dot(lightDirection, normal), 0.0);\n' +
+    'vec3 diffuse = u_LightColor * vec3(a_Color) * nDotL;\n' +
+    'vec3 ambient = u_AmbientLight * a_Color.rgb;\n' +
+    'v_Color = vec4(diffuse + ambient, a_Color.a);\n' +
+    '}\n';
 
-var FSHADER_SOURCE = 
-'precision mediump float;\n'+
-'varying vec4 v_Color;\n'+
-'void main(){\n'+
-'gl_FragColor = v_Color;\n'+
-'}\n';
+var FSHADER_SOURCE =
+    'precision mediump float;\n' +
+    'varying vec4 v_Color;\n' +
+    'void main(){\n' +
+    'gl_FragColor = v_Color;\n' +
+    '}\n';
 
 function main() {
     /**
@@ -33,7 +33,7 @@ function main() {
      */
     var canvas = document.getElementById("webgl");
     if (!canvas) {
-        return;       
+        return;
     }
 
     var gl = canvas.getContext("webgl");
@@ -41,80 +41,80 @@ function main() {
         return;
     }
 
-    if (!initShaders(gl,VSHADER_SOURCE,FSHADER_SOURCE)) {
+    if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
         console.error("init shader failed");
         return;
     }
 
     var n = initVertexBuffer(gl);
-    if (!n||n<=0) {
+    if (!n || n <= 0) {
         return;
     }
 
-    var u_MvpMatrix = gl.getUniformLocation(gl.program,"u_MvpMatrix");
+    var u_MvpMatrix = gl.getUniformLocation(gl.program, "u_MvpMatrix");
     if (u_MvpMatrix == null) {
         console.error("can't find u_MvpMatrix");
         return;
     }
 
-    var u_ModelMatrix = gl.getUniformLocation(gl.program,"u_ModelMatrix");
+    var u_ModelMatrix = gl.getUniformLocation(gl.program, "u_ModelMatrix");
     if (u_ModelMatrix == null) {
         console.error("can't find u_ModelMatrix");
         return;
     }
 
-    var u_NormalMatrix = gl.getUniformLocation(gl.program,"u_NormalMatrix");
+    var u_NormalMatrix = gl.getUniformLocation(gl.program, "u_NormalMatrix");
     if (u_NormalMatrix == null) {
         console.error("can't find u_NormalMatrix");
         return;
     }
 
-    var u_LightColor = gl.getUniformLocation(gl.program,"u_LightColor");
+    var u_LightColor = gl.getUniformLocation(gl.program, "u_LightColor");
     if (u_LightColor == null) {
         console.error("can't find u_LightColor");
         return;
     }
 
-    var u_LightPosition = gl.getUniformLocation(gl.program,"u_LightPosition");
+    var u_LightPosition = gl.getUniformLocation(gl.program, "u_LightPosition");
     if (u_LightPosition == null) {
         console.error("can't find u_LightPosition");
         return;
     }
 
-    var u_AmbientLight = gl.getUniformLocation(gl.program,"u_AmbientLight");
+    var u_AmbientLight = gl.getUniformLocation(gl.program, "u_AmbientLight");
     if (u_AmbientLight == null) {
         console.error("can't find u_AmbientLight");
         return;
     }
 
-    gl.clearColor(0.0,0.0,0.0,1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.enable(gl.DEPTH_TEST);
-    
+
     var mMatrix = new Matrix4();
     var vMatrix = new Matrix4();
     var pMatrix = new Matrix4();
     var mvpMatrix = new Matrix4();
     var nMatrix = new Matrix4();
-    
+
     gl.uniform3f(u_LightPosition, 0.0, 2.0, 3.0);
-    gl.uniform3f(u_LightColor,1.0,1.0,1.0);
-    gl.uniform3f(u_AmbientLight,0.2,0.2,0.2);
+    gl.uniform3f(u_LightColor, 1.0, 1.0, 1.0);
+    gl.uniform3f(u_AmbientLight, 0.2, 0.2, 0.2);
     var currAngle = 0;
     var tick = function () {
         currAngle = animate(currAngle);
-        mMatrix.setTranslate(0,0,0);
-        mMatrix.scale(1.5,1.5,1.5);
-        mMatrix.rotate(currAngle,0,1,0);
-        vMatrix.setLookAt(3,3,7,0,0,0,0,1,0);
-        pMatrix.setPerspective(30,1,1,100);
+        mMatrix.setTranslate(0, 0, 0);
+        mMatrix.scale(1.5, 1.5, 1.5);
+        mMatrix.rotate(currAngle, 0, 1, 0);
+        vMatrix.setLookAt(3, 3, 7, 0, 0, 0, 0, 1, 0);
+        pMatrix.setPerspective(30, 1, 1, 100);
         mvpMatrix.set(pMatrix).multiply(vMatrix).multiply(mMatrix);
-        gl.uniformMatrix4fv(u_MvpMatrix,false,mvpMatrix.elements);
+        gl.uniformMatrix4fv(u_MvpMatrix, false, mvpMatrix.elements);
         gl.uniformMatrix4fv(u_ModelMatrix, false, mMatrix.elements);
         nMatrix.setInverseOf(mMatrix);
         nMatrix.transpose();
-        gl.uniformMatrix4fv(u_NormalMatrix,false,nMatrix.elements);
-        gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-        gl.drawElements(gl.TRIANGLES,n,gl.UNSIGNED_BYTE,0);
+        gl.uniformMatrix4fv(u_NormalMatrix, false, nMatrix.elements);
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0);
         requestAnimationFrame(tick);
     }
     tick();
@@ -134,19 +134,19 @@ function initVertexBuffer(gl) {
         1.0, -1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0 //back
     ]);
     var colors = new Float32Array([
-        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
-        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
-        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
-        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
-        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
-        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
     ]);
     var normals = new Float32Array([
         0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0,
-        1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 
-        0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 
-        -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, 
-        0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 
+        1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0,
+        0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0,
+        -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0,
+        0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0,
         0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0
     ]);
     var indices = new Uint8Array([
@@ -157,7 +157,7 @@ function initVertexBuffer(gl) {
         16, 17, 18, 16, 18, 19,
         20, 21, 22, 20, 22, 23
     ]);
-    
+
     initArrayBuffers(gl, vertices, 3, gl.FLOAT, "a_Position");
     initArrayBuffers(gl, colors, 3, gl.FLOAT, "a_Color");
     initArrayBuffers(gl, normals, 3, gl.FLOAT, "a_Normal");
@@ -168,8 +168,8 @@ function initVertexBuffer(gl) {
         console.error("Failed to create the index buffer object.");
         return;
     }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
 
     return indices.length;
 }
@@ -182,8 +182,8 @@ function initVertexBuffer(gl) {
  * @param {*} type 
  * @param {*} attribute 
  */
-function initArrayBuffers(gl,data,num,type,attribute) {
-    var a_attribute = gl.getAttribLocation(gl.program,attribute);
+function initArrayBuffers(gl, data, num, type, attribute) {
+    var a_attribute = gl.getAttribLocation(gl.program, attribute);
     if (a_attribute < 0) {
         console.error("can't find " + attribute);
         return false;
@@ -204,7 +204,7 @@ function initArrayBuffers(gl,data,num,type,attribute) {
 // 计算下一帧的变化角度
 var TIMESTAMP = Date.now();
 var STEP = 30 // 30度/s
-function animate (angle) {
+function animate(angle) {
     var now = Date.now();
     var time_temp = Date.now() - TIMESTAMP; //两帧之间时间差
     TIMESTAMP = now;

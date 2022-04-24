@@ -1,36 +1,21 @@
-var Color_VSHADER_SOURCE =
+var Plane_VSHADER_SOURCE =
     'attribute vec4 a_Position;\n' +
-    'uniform mat4 u_MvpMatrix;\n' +
-    'uniform mat4 u_MMatrix;\n' +
-    'uniform mat4 u_NormalMatrix;\n' +
-    'attribute vec3 a_Color;\n' +
-    'attribute vec4 a_Normal;\n' +
-    'varying vec3 v_Color;\n' +
-    'varying vec3 v_Position;\n' +
-    'varying vec4 v_Normal;\n' +
+    'attribute vec2 a_TexCoord;\n' +
+    'varying vec2 v_TexCoord;\n' +
     'void main(){\n' +
     'gl_Position = u_MvpMatrix * a_Position;\n' +
-    'v_Color = a_Color;\n' +
-    'v_Position = vec3(u_MMatrix * a_Position);\n' +
-    'v_Normal = normalize(u_NormalMatrix * a_Normal);\n' +
+    'v_TexCoord = a_TexCoord;\n' +
     '}\n';
 
-var Color_FSHADER_SOURCE =
+var Plane_FSHADER_SOURCE =
     'precision mediump float;\n' +
-    'uniform vec3 u_LightPosition;\n' +
-    'uniform vec3 u_LightColor;\n' +
-    'uniform vec3 u_AmbientColor;\n' +
-    'varying vec3 v_Position;\n' +
-    'varying vec3 v_Color;\n' +
-    'varying vec4 v_Normal;\n' +
+    'uniform sampler2D u_Sampler;\n' +
+    'varying vec2 v_TexCoord;\n' +
     'void main(){\n' +
-    'vec3 lightDir = normalize(u_LightPosition - v_Position);\n' +
-    'vec3 normal = normalize(vec3(v_Normal));\n' +
-    'vec3 diffuse = u_LightColor * v_Color * max(dot(lightDir, normal), 0.0);\n' +
-    'vec3 ambient = u_AmbientColor * v_Color;\n' +
-    'gl_FragColor = vec4(diffuse + ambient,1.0);\n' +
+    'gl_FragColor = texture2D(u_Sampler, v_TexCoord);\n' +
     '}\n';
-var Tex_VSHADER_SOURCE =
+
+var Cube_VSHADER_SOURCE =
     'attribute vec4 a_Position;\n' +
     'uniform mat4 u_MvpMatrix;\n' +
     'uniform mat4 u_MMatrix;\n' +
@@ -47,7 +32,7 @@ var Tex_VSHADER_SOURCE =
     'v_Normal = normalize(u_NormalMatrix * a_Normal);\n' +
     '}\n';
 
-var Tex_FSHADER_SOURCE =
+var Cube_FSHADER_SOURCE =
     'precision mediump float;\n' +
     'uniform sampler2D u_Sampler;\n' +
     'uniform vec3 u_LightPosition;\n' +
@@ -65,10 +50,11 @@ var Tex_FSHADER_SOURCE =
     'gl_FragColor = vec4(diffuse + ambient,1.0);\n' +
     '}\n';
 
-
 var g_XAngle = 0.0;
 var g_YAngle = 0.0;
 var g_Step = 1;
+var OFFSCREEN_WIDTH = 256;
+var OFFSCREEN_HEIGHT = 256;
 function main() {
     /**
      * @type {HTMLCanvasElement}
@@ -82,32 +68,26 @@ function main() {
     if (!gl) {
         return;
     }
-    var colorProgram = createProgram(gl, Color_VSHADER_SOURCE, Color_FSHADER_SOURCE);
-    var texProgram = createProgram(gl, Tex_VSHADER_SOURCE, Tex_FSHADER_SOURCE);
+    var planeProgram = createProgram(gl, Plane_VSHADER_SOURCE, Plane_FSHADER_SOURCE);
+    var cubeProgram = createProgram(gl, Cube_VSHADER_SOURCE, Cube_FSHADER_SOURCE);
 
 
-    colorProgram.a_Position = gl.getAttribLocation(colorProgram, "a_Position");
-    colorProgram.a_Color = gl.getAttribLocation(colorProgram, "a_Color");
-    colorProgram.a_Normal = gl.getAttribLocation(colorProgram, "a_Normal");
-    colorProgram.u_MvpMatrix = gl.getUniformLocation(colorProgram, "u_MvpMatrix");
-    colorProgram.u_MMatrix = gl.getUniformLocation(colorProgram, "u_MMatrix");
-    colorProgram.u_NormalMatrix = gl.getUniformLocation(colorProgram, "u_NormalMatrix");
-    colorProgram.u_LightPosition = gl.getUniformLocation(colorProgram, "u_LightPosition");
-    colorProgram.u_LightColor = gl.getUniformLocation(colorProgram, "u_LightColor");
-    colorProgram.u_AmbientColor = gl.getUniformLocation(colorProgram, "u_AmbientColor");
+    planeProgram.a_Position = gl.getAttribLocation(planeProgram, "a_Position");
+    planeProgram.a_TexCoord = gl.getAttribLocation(planeProgram, "a_TexCoord");
+    planeProgram.u_Sampler = gl.getUniformLocation(planeProgram, "u_Sampler");
 
-    texProgram.a_Position = gl.getAttribLocation(texProgram, "a_Position");
-    texProgram.a_Normal = gl.getAttribLocation(texProgram, "a_Normal");
-    texProgram.a_TexCoord = gl.getAttribLocation(texProgram, "a_TexCoord");
-    texProgram.u_MvpMatrix = gl.getUniformLocation(texProgram, "u_MvpMatrix");
-    texProgram.u_MMatrix = gl.getUniformLocation(texProgram, "u_MMatrix");
-    texProgram.u_NormalMatrix = gl.getUniformLocation(texProgram, "u_NormalMatrix");
-    texProgram.u_LightPosition = gl.getUniformLocation(texProgram, "u_LightPosition");
-    texProgram.u_LightColor = gl.getUniformLocation(texProgram, "u_LightColor");
-    texProgram.u_AmbientColor = gl.getUniformLocation(texProgram, "u_AmbientColor");
-    texProgram.u_Sampler = gl.getUniformLocation(texProgram, "u_Sampler");
+    cubeProgram.a_Position = gl.getAttribLocation(cubeProgram, "a_Position");
+    cubeProgram.a_Normal = gl.getAttribLocation(cubeProgram, "a_Normal");
+    cubeProgram.a_TexCoord = gl.getAttribLocation(cubeProgram, "a_TexCoord");
+    cubeProgram.u_MvpMatrix = gl.getUniformLocation(cubeProgram, "u_MvpMatrix");
+    cubeProgram.u_MMatrix = gl.getUniformLocation(cubeProgram, "u_MMatrix");
+    cubeProgram.u_NormalMatrix = gl.getUniformLocation(cubeProgram, "u_NormalMatrix");
+    cubeProgram.u_LightPosition = gl.getUniformLocation(cubeProgram, "u_LightPosition");
+    cubeProgram.u_LightColor = gl.getUniformLocation(cubeProgram, "u_LightColor");
+    cubeProgram.u_AmbientColor = gl.getUniformLocation(cubeProgram, "u_AmbientColor");
+    cubeProgram.u_Sampler = gl.getUniformLocation(cubeProgram, "u_Sampler");
 
-    var colorCube = initVertexBuffer(gl);
+    var plane = initPlaneBuffer(gl);
     var texCube = initTexBuffer(gl);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -119,13 +99,21 @@ function main() {
     pMatrix.setPerspective(30, 1, 1, 100);
     vpMatrix.set(pMatrix).multiply(vMatrix);
 
-    var texture = initTextures(gl, texProgram);
+    var planeVPMatrix = new Matrix4();
+    planeVPMatrix.setPerspective(30, OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT, 1, 100);
+    planeVPMatrix.lookAt(0.0, 2.0, 7.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+
+    var cubeVPMatrix = new Matrix4();
+    cubeVPMatrix.setPerspective(30, OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT, 1, 100);
+    cubeVPMatrix.lookAt(0.0, 2.0, 7.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+
+    var texture = initTextures(gl, cubeProgram);
     var tick = function () {
         g_XAngle += g_Step;
         g_YAngle += g_Step;
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        drawColorCube(gl, colorProgram, colorCube, vpMatrix);
-        drawTexCube(gl, texProgram, texCube, texture, vpMatrix);
+        drawplane(gl, planeProgram, plane, vpMatrix);
+        drawTexCube(gl, cubeProgram, texCube, texture, vpMatrix);
         requestAnimationFrame(tick);
     }
     tick();
@@ -134,11 +122,11 @@ function main() {
 /**
  * 
  * @param {WebGLRenderingContext} gl 
- * @param {*} colorProgram 
- * @param {*} colorCube 
+ * @param {*} planeProgram 
+ * @param {*} plane 
  * @param {*} vpMatrix 
  */
-function drawColorCube(gl, program, cube, vpMatrix) {
+function drawplane(gl, program, cube, vpMatrix) {
     gl.useProgram(program);
     initAttributeVariable(gl, program.a_Position, cube.vertexBuffer);
     initAttributeVariable(gl, program.a_Normal, cube.normalBuffer);
@@ -150,7 +138,7 @@ function drawColorCube(gl, program, cube, vpMatrix) {
 /**
  * 
  * @param {WebGLRenderingContext} gl 
- * @param {*} texProgram 
+ * @param {*} cubeProgram 
  * @param {*} texCube 
  * @param {*} vpMatrix 
  */
@@ -206,48 +194,19 @@ function initAttributeVariable(gl, attr, buffer) {
     gl.enableVertexAttribArray(attr);
 }
 
-function initVertexBuffer(gl) {
+function initPlaneBuffer(gl) {
     var vertices = new Float32Array([
-        1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0, // 前 v0v1v2v3 0,1,2,3
-        1.0, 1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, // 右 v4v0v3v5 4,5,6,7
-        1.0, 1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, 1.0, // 上 v4v6v1v0 8,9,10,11
-        -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 1.0, // 左 v1v6v7v2 12,13,14,15
-        -1.0, 1.0, -1.0, 1.0, 1.0, -1.0, 1.0, -1.0, -1.0, -1.0, -1.0, -1.0, // 后 v6v4v5v7 16,17,18,19
-        -1.0, -1.0, -1.0, 1.0, -1.0, -1.0, 1.0, -1.0, 1.0, -1.0, -1.0, 1.0,// 下 v7v5v3v2 20,21,22,23
-    ]);
-    var colors = new Float32Array([
-        0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, //front
-        0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, //right
-        1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, 1.0, 0.4, 0.4, //up
-        1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, //left
-        1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, //btm
-        0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0, 0.4, 1.0, 1.0 //back
-    ]);
-    var normals = new Float32Array([
-        0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, // 前 v0v1v2v3 0,1,2,3
-        1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, // 右 v4v0v3v5 4,5,6,7
-        0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, // 上 v4v6v1v0 8,9,10,11
-        -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, // 左 v1v6v7v2 12,13,14,15
-        0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, // 后 v6v4v5v7 16,17,18,19
-        0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, // 下 v7v5v3v2 20,21,22,23
+        1.0, 1.0, 1.0, -1.0, 1.0, 1.0, -1.0, -1.0, 1.0, 1.0, -1.0, 1.0,
     ]);
     var indices = new Uint8Array([
-        0, 1, 2, 0, 2, 3,//前
-        4, 5, 6, 4, 6, 7,//右
-        8, 9, 10, 8, 10, 11,//上
-        12, 13, 14, 12, 14, 15,//左
-        16, 17, 18, 16, 18, 19,//右
-        20, 21, 22, 20, 22, 23,//下
+        0, 1, 2, 0, 2, 3,
     ]);
     var o = new Object();
     o.vertexBuffer = initArrayBufferForLaterUse(gl, vertices, 3, gl.FLOAT);
-    o.colorBuffer = initArrayBufferForLaterUse(gl, colors, 3, gl.FLOAT);
-    o.normalBuffer = initArrayBufferForLaterUse(gl, normals, 3, gl.FLOAT);
     o.indexBuffer = initElementArrayBufferForLaterUse(gl, indices, gl.UNSIGNED_BYTE);
     o.numIndices = indices.length;
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
-
     return o;
 }
 
