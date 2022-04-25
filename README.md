@@ -128,3 +128,11 @@
 >>7. 检查帧缓冲区是否正确配置(gl.checkFramebufferStatus())
 
 ![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_7_FrameBuffer/effect.png)
+
+## ch10_8 阴影贴图
+
+>将视点移动到光源位置，所有能够看到的片元就是光线能照到的，记录下片元的z值渲染到帧缓冲区作为阴影贴图。移回视点再渲染，比较待渲染的片元的坐标变换到光源坐标系下的z值，与阴影贴图记录值的大小，如果大于阴影贴图记录的值，说明无法被光线照射到，用较浅的颜色绘制，反之用正常颜色绘制。
+
+>比较z值与阴影贴图的值大小时，需要加一个偏移量，这是为了解决精度不一致造成的无法正确比较大小的问题。（会产生马赫带）
+
+![image](https://github.com/gaolizheng/LearnWebGL/blob/master/Ch10_8_ShadowMap/effect.png)

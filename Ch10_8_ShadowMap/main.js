@@ -50,8 +50,8 @@ var FSHADER_SOURCE =
     'vec3 normal = normalize(vec3(v_Normal));\n' +
     'vec3 diffuse = u_LightColor * texColor * max(dot(lightDir, normal), 0.0);\n' +
     'vec3 ambient = u_AmbientColor * texColor;\n' +
-    // 'float ratio = (shadowCoord.z > rgbaDepth.r + 0.005) ? 0.5 : 1.0;\n' +
-    'float ratio = (shadowCoord.z > rgbaDepth.r) ? 0.5 : 1.0;\n' +
+    'float ratio = (shadowCoord.z > rgbaDepth.r + 0.001) ? 0.5 : 1.0;\n' +
+    // 'float ratio = (shadowCoord.z > rgbaDepth.r) ? 0.5 : 1.0;\n' +
     'gl_FragColor = vec4((diffuse + ambient)*ratio, 1.0);\n' +
     '}\n';
 
@@ -195,10 +195,7 @@ function drawReal(gl, canvas, program, plane, cube, texture, shadowTex) {
  * 绘制真实的四边形
  * @param {WebGLRenderingContext} gl 
  * @param {*} program 
- * @param {*} plane 
- * @param {*} texture 
- * @param {*} shadowTex 
- * @param {*} vpMatrix 
+ * @param {*} buffers
  */
 function drawRealPlane(gl, program, buffers) {
     initAttributeVariable(gl, program.a_Position, buffers.vertexBuffer);
@@ -223,10 +220,7 @@ function drawRealPlane(gl, program, buffers) {
  * 绘制真实的立方体
  * @param {WebGLRenderingContext} gl 
  * @param {*} program 
- * @param {*} cube 
- * @param {*} texture 
- * @param {*} shadowTex 
- * @param {*} vpMatrix 
+ * @param {*} buffers
  */
 function drawRealCube(gl, program, buffers) {
     initAttributeVariable(gl, program.a_Position, buffers.vertexBuffer);
