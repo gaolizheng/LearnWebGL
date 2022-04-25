@@ -44,13 +44,14 @@ var FSHADER_SOURCE =
     'varying vec4 v_PositionFromLight;\n' +
     'void main(){\n' +
     'vec3 shadowCoord = (v_PositionFromLight.xyz / v_PositionFromLight.w)/2.0 + 0.5;\n' +
-    'vec4 rgbaDepth = texture2D(u_Sampler, shadowCoord.xy);\n' +
+    'vec4 rgbaDepth = texture2D(u_ShadowSampler, shadowCoord.xy);\n' +
     'vec3 texColor = vec3(texture2D(u_Sampler, v_TexCoord));\n' +
     'vec3 lightDir = normalize(u_LightPosition - v_Position);\n' +
     'vec3 normal = normalize(vec3(v_Normal));\n' +
     'vec3 diffuse = u_LightColor * texColor * max(dot(lightDir, normal), 0.0);\n' +
     'vec3 ambient = u_AmbientColor * texColor;\n' +
-    'float ratio = (shadowCoord.z > rgbaDepth.r + 0.005) ? 0.5 : 1.0;\n' +
+    // 'float ratio = (shadowCoord.z > rgbaDepth.r + 0.005) ? 0.5 : 1.0;\n' +
+    'float ratio = (shadowCoord.z > rgbaDepth.r) ? 0.5 : 1.0;\n' +
     'gl_FragColor = vec4((diffuse + ambient)*ratio, 1.0);\n' +
     '}\n';
 
@@ -101,12 +102,11 @@ function main() {
     var pMatrix = new Matrix4();
     var shadowVPMatrix = new Matrix4();
     vMatrix.setLookAt(LightPos[0], LightPos[1], LightPos[2], 0, 0, 0, 0, 1, 0);
-    // vMatrix.setLookAt(7.0, 7.0, 7.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-    pMatrix.setPerspective(30, OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT, 1, 100);
+    pMatrix.setPerspective(70, OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT, 1, 100);
     shadowVPMatrix.set(pMatrix).multiply(vMatrix);
 
     var vpMatrix = new Matrix4();
-    vpMatrix.setPerspective(30, canvas.width / canvas.height, 1, 100);
+    vpMatrix.setPerspective(45, canvas.width / canvas.height, 1, 100);
     vpMatrix.lookAt(7.0, 7.0, 7.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
     var texture = initTextures(gl);
@@ -116,8 +116,8 @@ function main() {
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
     var tick = function () {
-        // g_XAngle += g_Step;
-        // g_YAngle += g_Step;
+        g_XAngle += g_Step;
+        g_YAngle += g_Step;
 
         var planeMMatrix = drawShadow(gl, shadowProgram, fbo, plane, cube, shadowVPMatrix);
         drawReal(gl, canvas, cubeProgram, plane, cube, texture, fbo.texture, vpMatrix, shadowVPMatrix, planeMMatrix);
@@ -157,7 +157,7 @@ function drawReal(gl, canvas, program, plane, cube, texture, shadowTex, vpMatrix
     gl.useProgram(program);
     gl.uniform3f(program.u_LightPosition, LightPos[0], LightPos[1], LightPos[2]);
     gl.uniform3f(program.u_LightColor, 1.0, 1.0, 1.0);
-    gl.uniform3f(program.u_AmbientColor, 0.2, 0.2, 0.2);
+    gl.uniform3f(program.u_AmbientColor, 0.3, 0.3, 0.3);
     gl.uniformMatrix4fv(program.u_MVPMatrixFromLight, false, lightMatrix.elements);
 
     gl.activeTexture(gl.TEXTURE0);
@@ -239,7 +239,7 @@ function drawShadowPlane(gl, program, buffers, shadowVPMatrix) {
     var mMatrix = new Matrix4();
     var mvpMatrix = new Matrix4();
     mMatrix.setRotate(g_XAngle, 1.0, 0.0, 0.0);
-    mMatrix.rotate(g_YAngle, 0.0, 0.0, 1.0);
+    // mMatrix.rotate(g_YAngle, 0.0, 0.0, 1.0);
     mMatrix.translate(2.0, 0.0, 0.0);
     mMatrix.scale(0.5, 0.5, 0.5);
     mvpMatrix.set(shadowVPMatrix).multiply(mMatrix);
@@ -260,8 +260,9 @@ function drawShadowCube(gl, program, buffers, shadowVPMatrix) {
 
     var mMatrix = new Matrix4();
     var mvpMatrix = new Matrix4();
-    mMatrix.setRotate(g_XAngle, 1.0, 0.0, 0.0);
-    mMatrix.rotate(g_YAngle, 0.0, 1.0, 0.0);
+    // mMatrix.setRotate(g_XAngle, 1.0, 0.0, 0.0);
+    // mMatrix.rotate(g_YAngle, 0.0, 1.0, 0.0);
+    mMatrix.setIdentity();
     mvpMatrix.set(shadowVPMatrix).multiply(mMatrix);
     gl.uniformMatrix4fv(program.u_MvpMatrix, false, mvpMatrix.elements);
 
