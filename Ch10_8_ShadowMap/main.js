@@ -6,7 +6,7 @@ var Shadow_VSHADER_SOURCE =
     '}\n';
 
 var Shadow_FSHADER_SOURCE =
-    'precision mediump float;\n' +
+    'precision highp float;\n' +
     'void main(){\n' +
     'gl_FragColor = vec4(gl_FragCoord.z, 0.0, 0.0, 0.0);\n' +
     '}\n';
@@ -32,7 +32,7 @@ var VSHADER_SOURCE =
     '}\n';
 
 var FSHADER_SOURCE =
-    'precision mediump float;\n' +
+    'precision highp float;\n' +
     'uniform sampler2D u_Sampler;\n' +
     'uniform sampler2D u_ShadowSampler;\n' +
     'uniform vec3 u_LightPosition;\n' +
@@ -56,11 +56,15 @@ var FSHADER_SOURCE =
     '}\n';
 
 var g_XAngle = 0.0;
-var g_YAngle = 0.0;
 var g_Step = 1;
-var OFFSCREEN_WIDTH = 2048;
-var OFFSCREEN_HEIGHT = 2048;
-var LightPos = [10.0, 0.0, 0.0];
+var OFFSCREEN_WIDTH = 1024;
+var OFFSCREEN_HEIGHT = 1024;
+var LightPos = [10.0, 0.0, 0.0]; // 灯光的位置
+var g_PlaneModel = new Matrix4(); // 平面的模型矩阵
+var g_LightVP = new Matrix4(); // 光照贴图的视图投影矩阵
+var g_LightMVP =  new Matrix4(); // 光照贴图的模型视图投影矩阵
+
+var g_VP = new Matrix4(); // 视图投影矩阵
 function main() {
     /**
      * @type {HTMLCanvasElement}
@@ -98,16 +102,11 @@ function main() {
     var plane = initPlaneBuffer(gl);
     var cube = initCubeBuffer(gl);
 
-    var vMatrix = new Matrix4();
-    var pMatrix = new Matrix4();
-    var shadowVPMatrix = new Matrix4();
-    vMatrix.setLookAt(LightPos[0], LightPos[1], LightPos[2], 0, 0, 0, 0, 1, 0);
-    pMatrix.setPerspective(70, OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT, 1, 100);
-    shadowVPMatrix.set(pMatrix).multiply(vMatrix);
+    g_LightVP.setPerspective(70, OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT, 1, 100);
+    g_LightVP.lookAt(LightPos[0], LightPos[1], LightPos[2], 0, 0, 0, 0, 1, 0);
 
-    var vpMatrix = new Matrix4();
-    vpMatrix.setPerspective(45, canvas.width / canvas.height, 1, 100);
-    vpMatrix.lookAt(7.0, 7.0, 7.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    g_VP.setPerspective(45, canvas.width / canvas.height, 1, 100);
+    g_VP.lookAt(7.0, 7.0, 7.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
     var texture = initTextures(gl);
     var fbo = initFrameBuffer(gl);
@@ -117,40 +116,59 @@ function main() {
     gl.enable(gl.CULL_FACE);
     var tick = function () {
         g_XAngle += g_Step;
-        g_YAngle += g_Step;
+        g_XAngle %= 360;
+        g_PlaneModel.setRotate(g_XAngle, 1.0, 0.0, 0.0);
+        g_PlaneModel.translate(2.0, 0.0, 0.0);
+        g_PlaneModel.scale(0.5, 0.5, 0.5);
+        g_LightMVP.set(g_LightVP).multiply(g_PlaneModel);
 
-        var planeMMatrix = drawShadow(gl, shadowProgram, fbo, plane, cube, shadowVPMatrix);
-        drawReal(gl, canvas, cubeProgram, plane, cube, texture, fbo.texture, vpMatrix, shadowVPMatrix, planeMMatrix);
+        drawShadow(gl, shadowProgram, fbo, plane, cube);
+        drawReal(gl, canvas, cubeProgram, plane, cube, texture, fbo.texture);
         requestAnimationFrame(tick);
     }
     tick();
 }
 
 /**
- * 
+ * 绘制阴影贴图
  * @param {WebGLRenderingContext} gl
  */
-function drawShadow(gl, program, fbo, plane, cube, shadowVPMatrix) {
+function drawShadow(gl, program, fbo, plane, cube) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
     gl.viewport(0, 0, OFFSCREEN_WIDTH, OFFSCREEN_HEIGHT);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(program);
-    var planeMMatrix = drawShadowPlane(gl, program, plane, shadowVPMatrix);
-    drawShadowCube(gl, program, cube, shadowVPMatrix);
-    return planeMMatrix;
+    drawShadowPlane(gl, program, plane);
+    drawShadowCube(gl, program, cube);
 }
 
 /**
- * 
- * @param {WebGLRenderingContext} gl 
- * @param {*} program 
- * @param {*} fbo 
- * @param {*} plane 
- * @param {*} cube 
- * @param {*} texture 
- * @param {*} vpMatrix 
+ * 绘制阴影贴图的四边形
+ * @param {WebGLRenderingContext} gl
  */
-function drawReal(gl, canvas, program, plane, cube, texture, shadowTex, vpMatrix, lightMatrix, planeMMatrix) {
+ function drawShadowPlane(gl, program, buffers) {
+    initAttributeVariable(gl, program.a_Position, buffers.vertexBuffer);
+    gl.uniformMatrix4fv(program.u_MvpMatrix, false, g_LightMVP.elements);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indexBuffer);
+    gl.drawElements(gl.TRIANGLES, buffers.numIndices, gl.UNSIGNED_BYTE, 0);
+}
+
+/**
+ * 绘制阴影贴图的立方体
+ * @param {WebGLRenderingContext} gl
+ */
+function drawShadowCube(gl, program, buffers) {
+    initAttributeVariable(gl, program.a_Position, buffers.vertexBuffer);
+    gl.uniformMatrix4fv(program.u_MvpMatrix, false, g_LightVP.elements);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indexBuffer);
+    gl.drawElements(gl.TRIANGLES, buffers.numIndices, gl.UNSIGNED_BYTE, 0);
+}
+
+/**
+ * 绘制真实内容
+ * @param {WebGLRenderingContext} gl 
+ */
+function drawReal(gl, canvas, program, plane, cube, texture, shadowTex) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.viewport(0, 0, canvas.width, canvas.height);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -158,7 +176,6 @@ function drawReal(gl, canvas, program, plane, cube, texture, shadowTex, vpMatrix
     gl.uniform3f(program.u_LightPosition, LightPos[0], LightPos[1], LightPos[2]);
     gl.uniform3f(program.u_LightColor, 1.0, 1.0, 1.0);
     gl.uniform3f(program.u_AmbientColor, 0.3, 0.3, 0.3);
-    gl.uniformMatrix4fv(program.u_MVPMatrixFromLight, false, lightMatrix.elements);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -168,12 +185,14 @@ function drawReal(gl, canvas, program, plane, cube, texture, shadowTex, vpMatrix
     gl.bindTexture(gl.TEXTURE_2D, shadowTex);
     gl.uniform1i(program.u_ShadowSampler, 1);
 
-    drawRealPlane(gl, program, plane, vpMatrix, planeMMatrix);
-    drawRealCube(gl, program, cube, vpMatrix);
+    gl.uniformMatrix4fv(program.u_MVPMatrixFromLight, false, g_LightMVP.elements);
+    drawRealPlane(gl, program, plane);
+    gl.uniformMatrix4fv(program.u_MVPMatrixFromLight, false, g_LightVP.elements);
+    drawRealCube(gl, program, cube);
 }
 
 /**
- * 
+ * 绘制真实的四边形
  * @param {WebGLRenderingContext} gl 
  * @param {*} program 
  * @param {*} plane 
@@ -181,18 +200,18 @@ function drawReal(gl, canvas, program, plane, cube, texture, shadowTex, vpMatrix
  * @param {*} shadowTex 
  * @param {*} vpMatrix 
  */
-function drawRealPlane(gl, program, buffers, vpMatrix, planeMMatrix) {
+function drawRealPlane(gl, program, buffers) {
     initAttributeVariable(gl, program.a_Position, buffers.vertexBuffer);
     initAttributeVariable(gl, program.a_TexCoord, buffers.uvBuffer);
     initAttributeVariable(gl, program.a_Normal, buffers.normalBuffer);
 
     var mvpMatrix = new Matrix4();
-    mvpMatrix.set(vpMatrix).multiply(planeMMatrix);
+    mvpMatrix.set(g_VP).multiply(g_PlaneModel);
     gl.uniformMatrix4fv(program.u_MvpMatrix, false, mvpMatrix.elements);
-    gl.uniformMatrix4fv(program.u_MMatrix, false, planeMMatrix.elements);
+    gl.uniformMatrix4fv(program.u_MMatrix, false, g_PlaneModel.elements);
 
     var normalMatrix = new Matrix4();
-    normalMatrix.setInverseOf(planeMMatrix);
+    normalMatrix.setInverseOf(g_PlaneModel);
     normalMatrix.transpose();
     gl.uniformMatrix4fv(program.u_NormalMatrix, false, normalMatrix.elements);
 
@@ -201,7 +220,7 @@ function drawRealPlane(gl, program, buffers, vpMatrix, planeMMatrix) {
 }
 
 /**
- * 
+ * 绘制真实的立方体
  * @param {WebGLRenderingContext} gl 
  * @param {*} program 
  * @param {*} cube 
@@ -209,63 +228,16 @@ function drawRealPlane(gl, program, buffers, vpMatrix, planeMMatrix) {
  * @param {*} shadowTex 
  * @param {*} vpMatrix 
  */
-function drawRealCube(gl, program, buffers, vpMatrix) {
+function drawRealCube(gl, program, buffers) {
     initAttributeVariable(gl, program.a_Position, buffers.vertexBuffer);
     initAttributeVariable(gl, program.a_TexCoord, buffers.uvBuffer);
     initAttributeVariable(gl, program.a_Normal, buffers.normalBuffer);
 
-    var mvpMatrix = new Matrix4();
-    var mMatrix = new Matrix4();
-    mMatrix.setIdentity();
-    mvpMatrix.set(vpMatrix).multiply(mMatrix);
-    gl.uniformMatrix4fv(program.u_MvpMatrix, false, mvpMatrix.elements);
-    gl.uniformMatrix4fv(program.u_MMatrix, false, mMatrix.elements);
-
     var normalMatrix = new Matrix4();
     normalMatrix.setIdentity();
+    gl.uniformMatrix4fv(program.u_MvpMatrix, false, g_VP.elements);
+    gl.uniformMatrix4fv(program.u_MMatrix, false, normalMatrix.elements);
     gl.uniformMatrix4fv(program.u_NormalMatrix, false, normalMatrix.elements);
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indexBuffer);
-    gl.drawElements(gl.TRIANGLES, buffers.numIndices, gl.UNSIGNED_BYTE, 0);
-}
-
-/**
- * 
- * @param {WebGLRenderingContext} gl
- */
-function drawShadowPlane(gl, program, buffers, shadowVPMatrix) {
-    initAttributeVariable(gl, program.a_Position, buffers.vertexBuffer);
-
-    var mMatrix = new Matrix4();
-    var mvpMatrix = new Matrix4();
-    mMatrix.setRotate(g_XAngle, 1.0, 0.0, 0.0);
-    // mMatrix.rotate(g_YAngle, 0.0, 0.0, 1.0);
-    mMatrix.translate(2.0, 0.0, 0.0);
-    mMatrix.scale(0.5, 0.5, 0.5);
-    mvpMatrix.set(shadowVPMatrix).multiply(mMatrix);
-    gl.uniformMatrix4fv(program.u_MvpMatrix, false, mvpMatrix.elements);
-
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indexBuffer);
-    gl.drawElements(gl.TRIANGLES, buffers.numIndices, gl.UNSIGNED_BYTE, 0);
-
-    return mMatrix;
-}
-
-/**
- * 
- * @param {WebGLRenderingContext} gl
- */
-function drawShadowCube(gl, program, buffers, shadowVPMatrix) {
-    initAttributeVariable(gl, program.a_Position, buffers.vertexBuffer);
-
-    var mMatrix = new Matrix4();
-    var mvpMatrix = new Matrix4();
-    // mMatrix.setRotate(g_XAngle, 1.0, 0.0, 0.0);
-    // mMatrix.rotate(g_YAngle, 0.0, 1.0, 0.0);
-    mMatrix.setIdentity();
-    mvpMatrix.set(shadowVPMatrix).multiply(mMatrix);
-    gl.uniformMatrix4fv(program.u_MvpMatrix, false, mvpMatrix.elements);
-
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indexBuffer);
     gl.drawElements(gl.TRIANGLES, buffers.numIndices, gl.UNSIGNED_BYTE, 0);
 }
